@@ -8,9 +8,12 @@ global:
       clusterIssuer: letsencrypt-prod
       email: daveh@drachtio.org
   cassandra:
-    enabled: true
-  recordings:
     enabled: false
+  monitoring:
+    nodeMetrics:
+      enabled: true
+  logging:
+    enabled: true
   track:
     serviceProviderCalls: "0"
     accountCalls: "0"
@@ -25,8 +28,17 @@ monitoring:
   postgres: 
     secret: amFtYm9uZXM=
 
-# (required) name of cloud provider: azure, aws, gcp, exoscale, or none 
+# (required) name of cloud provider: azure, aws, gcp, exoscale, or none
 cloud:
+
+# (required) base domain for all portals (e.g. jambonz.example.com)
+# Hostnames are derived automatically:
+#   webapp  -> jambonz.example.com
+#   api     -> api.jambonz.example.com
+#   grafana -> grafana.jambonz.example.com
+#   homer   -> homer.jambonz.example.com
+# Individual hostnames below can still override if needed.
+baseUrl:
 
 # set this to "1" if you are deploying on AWS and you are using IMDSv2
 awsUseIMDSv2: "1"
@@ -100,7 +112,6 @@ sbc:
     # list of extra volumes
     extraVolumes:
     statefulset:
-      # enable it only if the recordings are also enabled
       enabled: false
       # match this value with the number of jambonz-rtp nodes
       replicas: 1
@@ -116,15 +127,16 @@ stats:
 
 # configuration information for rtpengine
 rtpengine:
-  image: jambonz/rtpengine:0.1.14
+  image: jambonz/rtpengine:12.5.1.48
   imagePullPolicy: IfNotPresent
   sidecarImage: jambonz/rtpengine-sidecar:0.9.5-11
   sidecarImagePullPolicy: IfNotPresent
+  wsUrl: "ws://127.0.0.1:8081"
   dtmfLogPort:  "22223"
   loglevel: "9"
   homerId: "11"
-  # used when global.recordings.enabled is true
   recordings:
+    enabled: false
     pvc: recordings-shared-volume
     dir: /recordings
     method: pcap
@@ -141,7 +153,7 @@ drachtio:
 
 # freeswitch configuration
 freeswitch:
-  image: jambonz/jambonz-freeswitch:10.1.0
+  image: jambonz/jambonz-freeswitch:10.1.2
   imagePullPolicy: IfNotPresent
   args:
     - freeswitch
@@ -154,11 +166,6 @@ api:
   httpPort: "3000"
   replicas: 1
   podAnnotations:
-  # (required) hostname for the jambonz port ingress
-  hostname:
-  # defaults to http, if you have tls enabled change to https 
-  # otherwise web to api connection will fail
-  protocol:
 
 dbUpgrade:
   image: jambonz/db-create:10.0.3
@@ -170,12 +177,16 @@ webapp:
   imagePullPolicy: IfNotPresent
   replicas: 1
   podAnnotations:
-  
-  # (required) hostname for the jambonz port ingress
-  hostname:
 
-  # set to true to disable recording in the portal
-  disableRecording: false 
+# standalone recording upload service for high-volume deployments;
+# when disabled, the feature server uploads recordings to the API server
+uploadRecordings:
+  enabled: false
+  image: jambonz/upload-recordings:1.7.3
+  imagePullPolicy: IfNotPresent
+  replicas: 1
+  httpPort: "3000"
+  podAnnotations:
 
 # sbc-inbound configuration
 sbcInbound:
@@ -240,22 +251,20 @@ apiban:
   foreverBlockRanges: "128.90.0.0/16,162.142.125.0/24,198.235.24.0/24,205.210.31.0/24"
   podAnnotations:
 
+loki:
+  image: grafana/loki:2.9.6
+  storage: 10Gi
+  retentionPeriod: 24h
+  podAnnotations:
+
+promtail:
+  image: grafana/promtail:2.9.6
+  podAnnotations:
+
 grafana:
-  image: grafana/grafana-oss:10.3.3 
-  hostname:
+  image: grafana/grafana-oss:10.3.3
   storage: 10Gi
   podAnnotations:
-  datasources:
-    datasources.yaml:
-      apiVersion: 1
-      datasources:
-        - name: Loki
-          type: loki
-          access: proxy
-          url: http://loki-stack.logging.svc.cluster.local:3100
-          isDefault: false
-          jsonData:
-            maxLines: 1000
             
 heplifyServer: 
   image: sipcapture/heplify-server:latest
@@ -270,9 +279,8 @@ cassandra:
   keyspace: jaeger_v1_dc1
   storage: 30Gi
   podAnnotations:
-homer: 
+homer:
   image: sipcapture/webapp:latest
-  hostname:
   podAnnotations:
 postgres: 
   image: postgres:11-alpine

@@ -1,0 +1,88 @@
+{{- if .Values.uploadRecordings.enabled }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: upload-recordings
+  labels:
+    app: upload-recordings
+{{ include "common.labels" . | indent 4 }}
+  namespace: {{ .Release.Namespace | quote }}
+spec:
+  replicas: {{ default 1 .Values.uploadRecordings.replicas }}
+  selector:
+    matchLabels:
+      app: upload-recordings
+  template:
+    metadata:
+      labels:
+        app: upload-recordings
+      annotations:
+        {{- if .Values.global.podAnnotations }}
+        {{ toYaml .Values.global.podAnnotations | default "" | nindent 8 }}
+        {{- end }}
+        {{- if .Values.uploadRecordings.podAnnotations }}
+        {{ toYaml .Values.uploadRecordings.podAnnotations | default "" | nindent 8 }}
+        {{- end }}
+    spec:
+      {{- if .Values.global.affinity }}
+      affinity:
+        {{ toYaml .Values.global.affinity | default "" | nindent 8 }}
+      {{- end }}
+      initContainers:
+        - image: kanisterio/mysql-sidecar:0.40.0
+          name: db-create-wait
+          command:
+            - sh
+            - -c
+            - |
+              until mysql -u {{ .Values.mysql.user }} -D {{ .Values.mysql.database }} -h mysql.{{ .Release.Namespace }} -p${MYSQL_PASSWORD} --protocol=tcp -e "select count(*) from accounts";
+              do
+                sleep 5
+              done
+          env:
+            - name: MYSQL_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: jambonz-secrets
+                  key: MYSQL_PASSWORD
+      containers:
+        - name: upload-recordings
+          image: {{ .Values.uploadRecordings.image }}
+          imagePullPolicy: {{ .Values.uploadRecordings.imagePullPolicy }}
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 3000
+          ports:
+            - containerPort: 3000
+          env:
+            - name: NODE_ENV
+              value: production
+            - name: HTTP_PORT
+              value: {{ .Values.uploadRecordings.httpPort | quote }}
+            - name: MYSQL_HOST
+              value: mysql.{{ .Release.Namespace }}
+            - name: MYSQL_USER
+              value: {{ .Values.mysql.user }}
+            - name: MYSQL_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: jambonz-secrets
+                  key: MYSQL_PASSWORD
+            - name: MYSQL_DATABASE
+              value: {{ .Values.mysql.database }}
+            - name: BASIC_AUTH_USERNAME
+              value: jambonz
+            - name: BASIC_AUTH_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: jambonz-secrets
+                  key: JWT_SECRET
+            - name: ENCRYPTION_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: jambonz-secrets
+                  key: JWT_SECRET
+          resources: {}
+      restartPolicy: Always
+{{- end }}

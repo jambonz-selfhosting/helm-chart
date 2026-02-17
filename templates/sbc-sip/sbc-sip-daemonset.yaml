@@ -89,6 +89,19 @@ spec:
             - {{ .Values.apiban.redisKey | quote }}
 {{- end }}
           env:
+            - name: JAMBONES_REDIS_HOST
+              value: redis.{{ .Release.Namespace }}
+            - name: JAMBONES_MYSQL_HOST
+              value: mysql.{{ .Release.Namespace }}
+            - name: JAMBONES_MYSQL_USER
+              value: {{ .Values.mysql.user }}
+            - name: JAMBONES_MYSQL_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: jambonz-secrets
+                  key: MYSQL_PASSWORD
+            - name: JAMBONES_MYSQL_DATABASE
+              value: {{ .Values.mysql.database }}
             - name: DRACHTIO_SECRET
               valueFrom:
                 secretKeyRef:
@@ -98,7 +111,7 @@ spec:
               value: "1"
             - name: SOFIA_SRES_NO_CACHE
               value: "1"
-            - name: CLOUD 
+            - name: CLOUD
               value: {{ required "cloud provider name" .Values.cloud | quote }}
             - name: IMDSv2 
               value: {{ .Values.awsUseIMDSv2 | quote }}

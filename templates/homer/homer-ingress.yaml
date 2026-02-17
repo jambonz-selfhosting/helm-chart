@@ -16,7 +16,7 @@ metadata:
 spec:
   ingressClassName: traefik
   rules:
-    - host: {{ required "hostname for the homer portal" .Values.homer.hostname }}
+    - host: {{ include "jambonz.homerHostname" . }}
       http:
         paths:
         - backend:
@@ -29,6 +29,6 @@ spec:
 {{- if .Values.global.traefik.tls.enabled }}
   tls:
   - hosts:
-    - {{ required "hostname for the web port" .Values.homer.hostname }}
+    - {{ include "jambonz.homerHostname" . }}
     secretName: jambonz-homer-tls
 {{- end }}

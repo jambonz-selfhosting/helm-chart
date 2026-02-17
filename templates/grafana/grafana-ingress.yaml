@@ -15,7 +15,7 @@ metadata:
 spec:
   ingressClassName: traefik
   rules:
-    - host: {{ required "hostname for the grafana portal" .Values.grafana.hostname }}
+    - host: {{ include "jambonz.grafanaHostname" . }}
       http:
         paths:
         - backend:
@@ -28,6 +28,6 @@ spec:
 {{- if .Values.global.traefik.tls.enabled }}
   tls:
   - hosts:
-    - {{ required "hostname for the grafana" .Values.grafana.hostname }}
+    - {{ include "jambonz.grafanaHostname" . }}
     secretName: jambonz-grafana-tls
 {{- end }}

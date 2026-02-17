@@ -32,7 +32,7 @@ spec:
         {{ .Values.sbcInbound.nodeSelector.label }}: {{ .Values.sbcInbound.nodeSelector.value | quote }}      
       {{- end }}   
       containers:
-        - name: sbc-inbound
+        - name: inbound
           image: {{ .Values.sbcInbound.image }}
           imagePullPolicy: {{ default "IfNotPresent" .Values.sbcInbound.imagePullPolicy }}
           lifecycle:

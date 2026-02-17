@@ -42,10 +42,10 @@ spec:
             - 'sh'
             - '-c'
             - |
-              echo "Seeding system_information: domain_name={{ .Values.webapp.hostname }}, sip_domain_name=sip.{{ .Values.webapp.hostname }}, monitoring_domain_name={{ .Values.grafana.hostname }}"
+              echo "Seeding system_information: domain_name={{ include "jambonz.webappHostname" . }}, sip_domain_name=sip.{{ include "jambonz.webappHostname" . }}, monitoring_domain_name={{ include "jambonz.grafanaHostname" . }}"
               mysql -h ${MYSQL_HOST} -u ${MYSQL_USER} -p${MYSQL_PASSWORD} ${MYSQL_DATABASE} -e "
                 INSERT INTO system_information (domain_name, sip_domain_name, monitoring_domain_name, log_level)
-                SELECT '{{ .Values.webapp.hostname }}', 'sip.{{ .Values.webapp.hostname }}', '{{ .Values.grafana.hostname }}', 'info'
+                SELECT '{{ include "jambonz.webappHostname" . }}', 'sip.{{ include "jambonz.webappHostname" . }}', '{{ include "jambonz.grafanaHostname" . }}', 'info'
                 WHERE NOT EXISTS (SELECT 1 FROM system_information LIMIT 1);
               "
           env:

@@ -70,6 +70,28 @@ spec:
             - mountPath: /var/lib/grafana/dashboards/jambonz-heplify.json
               name: grafana-provisioning
               subPath: jambonz-heplify.json
+            {{- if .Values.global.monitoring.nodeMetrics.enabled }}
+            - mountPath: /var/lib/grafana/dashboards/k8s-nodes.json
+              name: grafana-provisioning
+              subPath: k8s-nodes.json
+            {{- end }}
+            {{- if .Values.global.logging.enabled }}
+            - mountPath: /var/lib/grafana/dashboards/logs/logs-feature-server.json
+              name: grafana-provisioning
+              subPath: logs-feature-server.json
+            - mountPath: /var/lib/grafana/dashboards/logs/logs-sbc-sip.json
+              name: grafana-provisioning
+              subPath: logs-sbc-sip.json
+            - mountPath: /var/lib/grafana/dashboards/logs/logs-sbc-inbound.json
+              name: grafana-provisioning
+              subPath: logs-sbc-inbound.json
+            - mountPath: /var/lib/grafana/dashboards/logs/logs-sbc-outbound.json
+              name: grafana-provisioning
+              subPath: logs-sbc-outbound.json
+            - mountPath: /var/lib/grafana/dashboards/logs/logs-api-server.json
+              name: grafana-provisioning
+              subPath: logs-api-server.json
+            {{- end }}
       restartPolicy: Always
       volumes:
       - name: grafana-provisioning
@@ -84,6 +106,22 @@ spec:
             path: jambonz-dashboard.json
           - key: jambonz-heplify.json
             path: jambonz-heplify.json
+          {{- if .Values.global.monitoring.nodeMetrics.enabled }}
+          - key: k8s-nodes.json
+            path: k8s-nodes.json
+          {{- end }}
+          {{- if .Values.global.logging.enabled }}
+          - key: logs-feature-server.json
+            path: logs-feature-server.json
+          - key: logs-sbc-sip.json
+            path: logs-sbc-sip.json
+          - key: logs-sbc-inbound.json
+            path: logs-sbc-inbound.json
+          - key: logs-sbc-outbound.json
+            path: logs-sbc-outbound.json
+          - key: logs-api-server.json
+            path: logs-api-server.json
+          {{- end }}
   volumeClaimTemplates:
   - metadata:
       name: grafana-claim

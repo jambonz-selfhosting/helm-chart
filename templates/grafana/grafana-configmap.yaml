@@ -16,6 +16,14 @@ data:
         folder: 'jambonz'
         options:
           path: /var/lib/grafana/dashboards
+{{- if .Values.global.logging.enabled }}
+      - name: Logs
+        type: file
+        allowUiUpdates: true
+        folder: 'Jambonz Logs'
+        options:
+          path: /var/lib/grafana/dashboards/logs
+{{- end }}
 
   datasource.yaml: |
     # config file version
@@ -44,6 +52,7 @@ data:
 
     - name: InfluxDB-Telegraf
       type: influxdb
+      uid: influxdb-telegraf
       access: proxy
       database: telegraf
       user: grafana
@@ -52,6 +61,18 @@ data:
         timeInterval: "15s"
       # <bool> allow users to edit datasources from the UI.
       editable: true
+{{- if .Values.global.logging.enabled }}
+
+    - name: Loki
+      type: loki
+      uid: loki
+      access: proxy
+      url: http://loki.{{ .Release.Namespace }}:3100
+      isDefault: false
+      editable: true
+      jsonData:
+        maxLines: 1000
+{{- end }}
 
   jambonz-heplify.json: |
     {
@@ -1158,17 +1179,11 @@ data:
         "list": [
           {
             "builtIn": 1,
-            "datasource": "-- Grafana --",
+            "datasource": { "type": "grafana", "uid": "-- Grafana --" },
             "enable": true,
             "hide": true,
             "iconColor": "rgba(0, 211, 255, 1)",
             "name": "Annotations & Alerts",
-            "target": {
-              "limit": 100,
-              "matchAny": false,
-              "tags": [],
-              "type": "dashboard"
-            },
             "type": "dashboard"
           }
         ]
@@ -1176,223 +1191,410 @@ data:
       "editable": true,
       "fiscalYearStartMonth": 0,
       "graphTooltip": 0,
-      "id": 2,
+      "id": null,
       "links": [],
       "liveNow": false,
       "panels": [
         {
-          "aliasColors": {},
-          "bars": false,
-          "dashLength": 10,
-          "dashes": false,
-          "datasource": {
-            "type": "influxdb",
-            "uid": "PD39DF8CE8C1D829D"
+          "datasource": { "type": "influxdb", "uid": "influxdb-telegraf" },
+          "fieldConfig": {
+            "defaults": {
+              "color": { "fixedColor": "dark-green", "mode": "fixed" },
+              "mappings": [],
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [{ "color": "green", "value": null }]
+              }
+            },
+            "overrides": []
           },
-          "fill": 1,
-          "fillGradient": 0,
-          "gridPos": {
-            "h": 8,
-            "w": 8,
-            "x": 0,
-            "y": 0
-          },
-          "hiddenSeries": false,
-          "id": 29,
-          "interval": "20s",
-          "legend": {
-            "avg": false,
-            "current": false,
-            "max": false,
-            "min": false,
-            "show": true,
-            "total": false,
-            "values": false
-          },
-          "lines": true,
-          "linewidth": 1,
-          "nullPointMode": "null",
+          "gridPos": { "h": 7, "w": 4, "x": 0, "y": 0 },
+          "id": 1,
           "options": {
-            "alertThreshold": true
+            "colorMode": "value",
+            "graphMode": "area",
+            "justifyMode": "auto",
+            "orientation": "horizontal",
+            "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false },
+            "showPercentChange": false,
+            "textMode": "auto",
+            "wideLayout": true
           },
-          "percentage": false,
-          "pluginVersion": "8.3.4",
-          "pointradius": 2,
-          "points": false,
-          "renderer": "flot",
-          "seriesOverrides": [],
-          "spaceLength": 10,
-          "stack": false,
-          "steppedLine": false,
           "targets": [
             {
+              "datasource": { "type": "influxdb", "uid": "influxdb-telegraf" },
+              "query": "SELECT SUM(\"value\") FROM (SELECT LAST(\"value\") AS \"value\" FROM \"sbc_sip_calls_count\" WHERE $timeFilter AND \"direction\" = 'inbound' GROUP BY \"host\", \"instance_id\" fill(null))",
+              "rawQuery": true,
+              "refId": "A",
+              "resultFormat": "time_series"
+            }
+          ],
+          "title": "Inbound calls",
+          "type": "stat"
+        },
+        {
+          "datasource": { "type": "influxdb", "uid": "influxdb-telegraf" },
+          "fieldConfig": {
+            "defaults": {
+              "color": { "fixedColor": "dark-green", "mode": "fixed" },
+              "mappings": [],
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [{ "color": "green", "value": null }]
+              }
+            },
+            "overrides": []
+          },
+          "gridPos": { "h": 7, "w": 4, "x": 4, "y": 0 },
+          "id": 2,
+          "options": {
+            "colorMode": "value",
+            "graphMode": "area",
+            "justifyMode": "auto",
+            "orientation": "horizontal",
+            "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false },
+            "showPercentChange": false,
+            "textMode": "auto",
+            "wideLayout": true
+          },
+          "targets": [
+            {
+              "datasource": { "type": "influxdb", "uid": "influxdb-telegraf" },
+              "query": "SELECT SUM(\"value\") FROM (SELECT LAST(\"value\") AS \"value\" FROM \"sbc_sip_calls_count\" WHERE $timeFilter AND \"direction\" = 'outbound' GROUP BY \"host\", \"instance_id\" fill(null))",
+              "rawQuery": true,
+              "refId": "A",
+              "resultFormat": "time_series"
+            }
+          ],
+          "title": "Outbound calls",
+          "type": "stat"
+        },
+        {
+          "datasource": { "type": "influxdb", "uid": "influxdb-telegraf" },
+          "fieldConfig": {
+            "defaults": {
+              "color": { "mode": "palette-classic" },
+              "custom": {
+                "axisBorderShow": false,
+                "axisCenteredZero": false,
+                "axisColorMode": "text",
+                "axisLabel": "",
+                "axisPlacement": "auto",
+                "barAlignment": 0,
+                "drawStyle": "line",
+                "fillOpacity": 10,
+                "gradientMode": "none",
+                "hideFrom": { "legend": false, "tooltip": false, "viz": false },
+                "insertNulls": false,
+                "lineInterpolation": "linear",
+                "lineWidth": 1,
+                "pointSize": 5,
+                "scaleDistribution": { "type": "linear" },
+                "showPoints": "auto",
+                "spanNulls": false,
+                "stacking": { "group": "A", "mode": "none" },
+                "thresholdsStyle": { "mode": "off" }
+              },
+              "decimals": 0,
+              "mappings": [],
+              "min": 0,
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  { "color": "green", "value": null },
+                  { "color": "red", "value": 80 }
+                ]
+              },
+              "unit": "short"
+            },
+            "overrides": []
+          },
+          "gridPos": { "h": 5, "w": 8, "x": 8, "y": 0 },
+          "id": 3,
+          "options": {
+            "legend": { "calcs": [], "displayMode": "list", "placement": "bottom", "showLegend": true },
+            "tooltip": { "mode": "single", "sort": "none" }
+          },
+          "targets": [
+            {
+              "datasource": { "type": "influxdb", "uid": "influxdb-telegraf" },
+              "alias": "$tag_host:$tag_instance_id",
               "groupBy": [
-                {
-                  "params": [
-                    "$__interval"
-                  ],
-                  "type": "time"
-                },
-                {
-                  "params": [
-                    "null"
-                  ],
-                  "type": "fill"
-                }
+                { "params": ["$__interval"], "type": "time" },
+                { "params": ["host"], "type": "tag" },
+                { "params": ["instance_id"], "type": "tag" },
+                { "params": ["previous"], "type": "fill" }
+              ],
+              "measurement": "sbc_sip_calls_count",
+              "orderByTime": "ASC",
+              "policy": "default",
+              "refId": "A",
+              "resultFormat": "time_series",
+              "select": [[
+                { "params": ["value"], "type": "field" },
+                { "params": [], "type": "max" }
+              ]],
+              "tags": []
+            }
+          ],
+          "title": "Total Calls",
+          "type": "timeseries"
+        },
+        {
+          "datasource": { "type": "influxdb", "uid": "influxdb-telegraf" },
+          "fieldConfig": {
+            "defaults": {
+              "color": { "mode": "palette-classic" },
+              "custom": {
+                "axisBorderShow": false,
+                "axisCenteredZero": false,
+                "axisColorMode": "text",
+                "axisLabel": "",
+                "axisPlacement": "auto",
+                "barAlignment": 0,
+                "drawStyle": "line",
+                "fillOpacity": 10,
+                "gradientMode": "none",
+                "hideFrom": { "legend": false, "tooltip": false, "viz": false },
+                "insertNulls": false,
+                "lineInterpolation": "linear",
+                "lineWidth": 1,
+                "pointSize": 5,
+                "scaleDistribution": { "type": "linear" },
+                "showPoints": "auto",
+                "spanNulls": false,
+                "stacking": { "group": "A", "mode": "none" },
+                "thresholdsStyle": { "mode": "off" }
+              },
+              "decimals": 0,
+              "mappings": [],
+              "min": 0,
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  { "color": "green", "value": null },
+                  { "color": "red", "value": 80 }
+                ]
+              },
+              "unit": "short"
+            },
+            "overrides": []
+          },
+          "gridPos": { "h": 5, "w": 8, "x": 16, "y": 0 },
+          "id": 4,
+          "options": {
+            "legend": { "calcs": [], "displayMode": "list", "placement": "bottom", "showLegend": true },
+            "tooltip": { "mode": "single", "sort": "none" }
+          },
+          "targets": [
+            {
+              "datasource": { "type": "influxdb", "uid": "influxdb-telegraf" },
+              "alias": "$tag_host",
+              "groupBy": [
+                { "params": ["$__interval"], "type": "time" },
+                { "params": ["host"], "type": "tag" },
+                { "params": ["linear"], "type": "fill" }
               ],
               "measurement": "sbc_media_calls_count",
               "orderByTime": "ASC",
               "policy": "default",
-              "queryType": "randomWalk",
               "refId": "A",
               "resultFormat": "time_series",
-              "select": [
-                [
-                  {
-                    "params": [
-                      "value"
-                    ],
-                    "type": "field"
-                  },
-                  {
-                    "params": [],
-                    "type": "last"
-                  }
-                ]
-              ],
+              "select": [[
+                { "params": ["value"], "type": "field" },
+                { "params": [], "type": "mean" }
+              ]],
               "tags": []
             }
           ],
-          "thresholds": [],
-          "timeRegions": [],
-          "title": "Estimated Calls",
-          "tooltip": {
-            "shared": true,
-            "sort": 0,
-            "value_type": "individual"
-          },
-          "type": "graph",
-          "xaxis": {
-            "mode": "time",
-            "show": true,
-            "values": []
-          },
-          "yaxes": [
-            {
-              "$$hashKey": "object:1209",
-              "format": "short",
-              "logBase": 1,
-              "show": true
-            },
-            {
-              "$$hashKey": "object:1210",
-              "format": "short",
-              "logBase": 1,
-              "show": true
-            }
-          ],
-          "yaxis": {
-            "align": false
-          }
+          "title": "Total Media Streams",
+          "type": "timeseries"
         },
         {
-          "datasource": {
-            "type": "influxdb",
-            "uid": "PD39DF8CE8C1D829D"
-          },
+          "datasource": { "type": "influxdb", "uid": "influxdb-telegraf" },
           "fieldConfig": {
             "defaults": {
-              "color": {
-                "mode": "palette-classic"
-              },
+              "color": { "mode": "palette-classic" },
               "custom": {
-                "hideFrom": {
-                  "legend": false,
-                  "tooltip": false,
-                  "viz": false
-                }
+                "axisBorderShow": false,
+                "axisCenteredZero": false,
+                "axisColorMode": "text",
+                "axisLabel": "",
+                "axisPlacement": "auto",
+                "barAlignment": 0,
+                "drawStyle": "line",
+                "fillOpacity": 10,
+                "gradientMode": "none",
+                "hideFrom": { "legend": false, "tooltip": false, "viz": false },
+                "insertNulls": false,
+                "lineInterpolation": "linear",
+                "lineWidth": 1,
+                "pointSize": 5,
+                "scaleDistribution": { "type": "linear" },
+                "showPoints": "auto",
+                "spanNulls": false,
+                "stacking": { "group": "A", "mode": "none" },
+                "thresholdsStyle": { "mode": "off" }
               },
-              "mappings": []
+              "decimals": 0,
+              "mappings": [],
+              "min": 0,
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  { "color": "green", "value": null },
+                  { "color": "red", "value": 80 }
+                ]
+              },
+              "unit": "short"
             },
             "overrides": []
           },
-          "gridPos": {
-            "h": 8,
-            "w": 16,
-            "x": 8,
-            "y": 0
-          },
-          "id": 35,
+          "gridPos": { "h": 5, "w": 8, "x": 8, "y": 5 },
+          "id": 5,
           "options": {
-            "displayLabels": [
-              "percent"
-            ],
-            "legend": {
-              "displayMode": "list",
-              "placement": "bottom",
-              "values": [
-                "value"
-              ]
-            },
-            "pieType": "pie",
-            "reduceOptions": {
-              "calcs": [
-                "count"
-              ],
-              "fields": "",
-              "values": false
-            },
-            "tooltip": {
-              "mode": "single"
-            }
+            "legend": { "calcs": [], "displayMode": "list", "placement": "bottom", "showLegend": true },
+            "tooltip": { "mode": "single", "sort": "none" }
           },
-          "pluginVersion": "8.3.4",
           "targets": [
             {
-              "datasource": {
-                "type": "influxdb",
-                "uid": "PD39DF8CE8C1D829D"
-              },
+              "datasource": { "type": "influxdb", "uid": "influxdb-telegraf" },
+              "alias": "$tag_host:$tag_instance_id",
               "groupBy": [
-                {
-                  "params": [
-                    "$__interval"
-                  ],
-                  "type": "time"
-                },
-                {
-                  "params": [
-                    "sipStatus"
-                  ],
-                  "type": "tag"
-                },
-                {
-                  "params": [
-                    "none"
-                  ],
-                  "type": "fill"
-                }
+                { "params": ["$__interval"], "type": "time" },
+                { "params": ["host"], "type": "tag" },
+                { "params": ["instance_id"], "type": "tag" },
+                { "params": ["previous"], "type": "fill" }
+              ],
+              "measurement": "sbc_sip_calls_count",
+              "orderByTime": "ASC",
+              "policy": "default",
+              "refId": "A",
+              "resultFormat": "time_series",
+              "select": [[
+                { "params": ["value"], "type": "field" },
+                { "params": [], "type": "max" }
+              ]],
+              "tags": [
+                { "key": "direction", "operator": "=", "value": "outbound" }
+              ]
+            }
+          ],
+          "title": "Total Outbound Calls",
+          "type": "timeseries"
+        },
+        {
+          "datasource": { "type": "influxdb", "uid": "influxdb-telegraf" },
+          "fieldConfig": {
+            "defaults": {
+              "color": { "mode": "palette-classic" },
+              "custom": {
+                "axisBorderShow": false,
+                "axisCenteredZero": false,
+                "axisColorMode": "text",
+                "axisLabel": "",
+                "axisPlacement": "auto",
+                "barAlignment": 0,
+                "drawStyle": "line",
+                "fillOpacity": 10,
+                "gradientMode": "none",
+                "hideFrom": { "legend": false, "tooltip": false, "viz": false },
+                "insertNulls": false,
+                "lineInterpolation": "linear",
+                "lineWidth": 1,
+                "pointSize": 5,
+                "scaleDistribution": { "type": "linear" },
+                "showPoints": "auto",
+                "spanNulls": false,
+                "stacking": { "group": "A", "mode": "none" },
+                "thresholdsStyle": { "mode": "off" }
+              },
+              "decimals": 0,
+              "mappings": [],
+              "min": 0,
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  { "color": "green", "value": null },
+                  { "color": "red", "value": 80 }
+                ]
+              },
+              "unit": "none"
+            },
+            "overrides": []
+          },
+          "gridPos": { "h": 5, "w": 8, "x": 16, "y": 5 },
+          "id": 6,
+          "options": {
+            "legend": { "calcs": [], "displayMode": "list", "placement": "bottom", "showLegend": true },
+            "tooltip": { "mode": "single", "sort": "none" }
+          },
+          "targets": [
+            {
+              "datasource": { "type": "influxdb", "uid": "influxdb-telegraf" },
+              "alias": "$tag_host",
+              "groupBy": [
+                { "params": ["$__interval"], "type": "time" },
+                { "params": ["host"], "type": "tag" },
+                { "params": ["previous"], "type": "fill" }
+              ],
+              "measurement": "fs_media_channels_in_use",
+              "orderByTime": "ASC",
+              "policy": "default",
+              "refId": "A",
+              "resultFormat": "time_series",
+              "select": [[
+                { "params": ["value"], "type": "field" },
+                { "params": [], "type": "mean" }
+              ]],
+              "tags": []
+            }
+          ],
+          "title": "Freeswitch Channels",
+          "type": "timeseries"
+        },
+        {
+          "datasource": { "type": "influxdb", "uid": "influxdb-telegraf" },
+          "fieldConfig": {
+            "defaults": {
+              "color": { "mode": "palette-classic" },
+              "mappings": [],
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  { "color": "green", "value": null },
+                  { "color": "red", "value": 80 }
+                ]
+              }
+            },
+            "overrides": []
+          },
+          "gridPos": { "h": 5, "w": 8, "x": 0, "y": 7 },
+          "id": 7,
+          "options": {
+            "displayLabels": [],
+            "legend": { "displayMode": "list", "placement": "bottom", "showLegend": true, "values": ["value"] },
+            "pieType": "pie",
+            "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false },
+            "tooltip": { "mode": "single", "sort": "none" }
+          },
+          "targets": [
+            {
+              "datasource": { "type": "influxdb", "uid": "influxdb-telegraf" },
+              "groupBy": [
+                { "params": ["$__interval"], "type": "time" },
+                { "params": ["sipStatus"], "type": "tag" },
+                { "params": ["none"], "type": "fill" }
               ],
               "measurement": "sbc_terminations",
               "orderByTime": "ASC",
               "policy": "default",
-              "queryType": "randomWalk",
               "refId": "A",
               "resultFormat": "time_series",
-              "select": [
-                [
-                  {
-                    "params": [
-                      "value"
-                    ],
-                    "type": "field"
-                  },
-                  {
-                    "params": [],
-                    "type": "count"
-                  }
-                ]
-              ],
+              "select": [[
+                { "params": ["value"], "type": "field" },
+                { "params": [], "type": "mean" }
+              ]],
               "tags": []
             }
           ],
@@ -1400,1703 +1602,1621 @@ data:
           "type": "piechart"
         },
         {
-          "collapsed": false,
-          "gridPos": {
-            "h": 1,
-            "w": 24,
-            "x": 0,
-            "y": 8
-          },
-          "id": 27,
-          "panels": [],
-          "title": "Row title",
-          "type": "row"
-        },
-        {
-          "datasource": {
-            "type": "influxdb",
-            "uid": "PD39DF8CE8C1D829D"
-          },
+          "datasource": { "type": "influxdb", "uid": "influxdb-telegraf" },
           "fieldConfig": {
             "defaults": {
-              "color": {
-                "mode": "thresholds"
+              "color": { "mode": "palette-classic" },
+              "custom": {
+                "axisBorderShow": false,
+                "axisCenteredZero": false,
+                "axisColorMode": "text",
+                "axisLabel": "",
+                "axisPlacement": "auto",
+                "barAlignment": 0,
+                "drawStyle": "line",
+                "fillOpacity": 0,
+                "gradientMode": "none",
+                "hideFrom": { "legend": false, "tooltip": false, "viz": false },
+                "insertNulls": false,
+                "lineInterpolation": "linear",
+                "lineWidth": 1,
+                "pointSize": 5,
+                "scaleDistribution": { "type": "linear" },
+                "showPoints": "auto",
+                "spanNulls": false,
+                "stacking": { "group": "A", "mode": "none" },
+                "thresholdsStyle": { "mode": "off" }
               },
+              "decimals": 0,
               "mappings": [],
+              "min": 0,
               "thresholds": {
                 "mode": "absolute",
                 "steps": [
-                  {
-                    "color": "green",
-                    "value": null
-                  },
-                  {
-                    "color": "red",
-                    "value": 80
-                  }
+                  { "color": "green", "value": null },
+                  { "color": "red", "value": 80 }
                 ]
-              }
+              },
+              "unit": "none"
             },
             "overrides": []
           },
-          "gridPos": {
-            "h": 5,
-            "w": 4,
-            "x": 0,
-            "y": 9
+          "gridPos": { "h": 7, "w": 8, "x": 8, "y": 10 },
+          "id": 8,
+          "options": {
+            "legend": { "calcs": [], "displayMode": "list", "placement": "bottom", "showLegend": true },
+            "tooltip": { "mode": "single", "sort": "none" }
           },
+          "targets": [
+            {
+              "datasource": { "type": "influxdb", "uid": "influxdb-telegraf" },
+              "alias": "$tag_host",
+              "groupBy": [
+                { "params": ["$__interval"], "type": "time" },
+                { "params": ["host"], "type": "tag" },
+                { "params": ["previous"], "type": "fill" }
+              ],
+              "measurement": "recording_sessions_count",
+              "orderByTime": "ASC",
+              "policy": "default",
+              "refId": "A",
+              "resultFormat": "time_series",
+              "select": [[
+                { "params": ["value"], "type": "field" },
+                { "params": [], "type": "mean" }
+              ]],
+              "tags": []
+            }
+          ],
+          "title": "Recording sessions",
+          "type": "timeseries"
+        },
+        {
+          "datasource": { "type": "influxdb", "uid": "influxdb-telegraf" },
+          "fieldConfig": {
+            "defaults": {
+              "color": { "mode": "palette-classic" },
+              "custom": {
+                "axisBorderShow": false,
+                "axisCenteredZero": false,
+                "axisColorMode": "text",
+                "axisLabel": "",
+                "axisPlacement": "auto",
+                "barAlignment": 0,
+                "drawStyle": "line",
+                "fillOpacity": 10,
+                "gradientMode": "none",
+                "hideFrom": { "legend": false, "tooltip": false, "viz": false },
+                "insertNulls": false,
+                "lineInterpolation": "linear",
+                "lineWidth": 1,
+                "pointSize": 5,
+                "scaleDistribution": { "type": "linear" },
+                "showPoints": "auto",
+                "spanNulls": false,
+                "stacking": { "group": "A", "mode": "none" },
+                "thresholdsStyle": { "mode": "off" }
+              },
+              "decimals": 0,
+              "mappings": [],
+              "min": 0,
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  { "color": "green", "value": null },
+                  { "color": "red", "value": 80 }
+                ]
+              },
+              "unit": "ms"
+            },
+            "overrides": []
+          },
+          "gridPos": { "h": 7, "w": 8, "x": 16, "y": 10 },
           "id": 9,
           "options": {
-            "colorMode": "value",
-            "graphMode": "none",
-            "justifyMode": "auto",
-            "orientation": "auto",
-            "reduceOptions": {
-              "calcs": [
-                "lastNotNull"
-              ],
-              "fields": "/^sbc_sip_calls_count\\.last$/",
-              "values": false
-            },
-            "text": {},
-            "textMode": "auto"
+            "legend": { "calcs": [], "displayMode": "list", "placement": "bottom", "showLegend": true },
+            "tooltip": { "mode": "single", "sort": "none" }
           },
-          "pluginVersion": "8.3.4",
           "targets": [
             {
+              "datasource": { "type": "influxdb", "uid": "influxdb-telegraf" },
+              "alias": "average",
               "groupBy": [
-                {
-                  "params": [
-                    "$__interval"
-                  ],
-                  "type": "time"
-                },
-                {
-                  "params": [
-                    "null"
-                  ],
-                  "type": "fill"
-                }
+                { "params": ["$__interval"], "type": "time" },
+                { "params": ["null"], "type": "fill" }
               ],
-              "measurement": "sbc_sip_calls_count",
+              "measurement": "app_hook_ws_response_time",
               "orderByTime": "ASC",
               "policy": "default",
-              "queryType": "randomWalk",
               "refId": "A",
               "resultFormat": "time_series",
-              "select": [
-                [
-                  {
-                    "params": [
-                      "value"
-                    ],
-                    "type": "field"
-                  },
-                  {
-                    "params": [],
-                    "type": "last"
-                  }
-                ]
+              "select": [[
+                { "params": ["mean"], "type": "field" },
+                { "params": [], "type": "mean" }
+              ]],
+              "tags": []
+            },
+            {
+              "datasource": { "type": "influxdb", "uid": "influxdb-telegraf" },
+              "alias": "90th percentile",
+              "groupBy": [
+                { "params": ["$__interval"], "type": "time" },
+                { "params": ["null"], "type": "fill" }
               ],
+              "measurement": "app_hook_ws_response_time",
+              "orderByTime": "ASC",
+              "policy": "default",
+              "refId": "B",
+              "resultFormat": "time_series",
+              "select": [[
+                { "params": ["90_percentile"], "type": "field" },
+                { "params": [], "type": "mean" }
+              ]],
               "tags": []
             }
           ],
-          "title": "Current Calls",
-          "type": "stat"
+          "title": "Websocket Response Time",
+          "type": "timeseries"
         },
         {
-          "datasource": {
-            "type": "influxdb",
-            "uid": "PD39DF8CE8C1D829D"
-          },
+          "datasource": { "type": "influxdb", "uid": "influxdb-telegraf" },
           "fieldConfig": {
             "defaults": {
-              "color": {
-                "mode": "thresholds"
+              "color": { "mode": "palette-classic" },
+              "custom": {
+                "axisBorderShow": false,
+                "axisCenteredZero": false,
+                "axisColorMode": "text",
+                "axisLabel": "",
+                "axisPlacement": "auto",
+                "barAlignment": 0,
+                "drawStyle": "line",
+                "fillOpacity": 10,
+                "gradientMode": "none",
+                "hideFrom": { "legend": false, "tooltip": false, "viz": false },
+                "insertNulls": false,
+                "lineInterpolation": "linear",
+                "lineWidth": 1,
+                "pointSize": 5,
+                "scaleDistribution": { "type": "linear" },
+                "showPoints": "auto",
+                "spanNulls": false,
+                "stacking": { "group": "A", "mode": "none" },
+                "thresholdsStyle": { "mode": "off" }
               },
+              "decimals": 0,
               "mappings": [],
+              "min": 0,
               "thresholds": {
                 "mode": "absolute",
                 "steps": [
-                  {
-                    "color": "green",
-                    "value": null
-                  },
-                  {
-                    "color": "red",
-                    "value": 80
-                  }
+                  { "color": "green", "value": null },
+                  { "color": "red", "value": 80 }
                 ]
-              }
+              },
+              "unit": "short"
             },
             "overrides": []
           },
-          "gridPos": {
-            "h": 5,
-            "w": 4,
-            "x": 4,
-            "y": 9
-          },
+          "gridPos": { "h": 5, "w": 8, "x": 0, "y": 12 },
           "id": 10,
           "options": {
-            "colorMode": "value",
-            "graphMode": "none",
-            "justifyMode": "auto",
-            "orientation": "auto",
-            "reduceOptions": {
-              "calcs": [
-                "lastNotNull"
-              ],
-              "fields": "",
-              "values": false
-            },
-            "text": {},
-            "textMode": "auto"
+            "legend": { "calcs": [], "displayMode": "list", "placement": "bottom", "showLegend": true },
+            "tooltip": { "mode": "single", "sort": "none" }
           },
-          "pluginVersion": "8.3.4",
           "targets": [
             {
+              "datasource": { "type": "influxdb", "uid": "influxdb-telegraf" },
+              "alias": "$tag_host:$tag_instance_id",
               "groupBy": [
-                {
-                  "params": [
-                    "$__interval"
-                  ],
-                  "type": "time"
-                },
-                {
-                  "params": [
-                    "null"
-                  ],
-                  "type": "fill"
-                }
-              ],
-              "measurement": "sbc_media_calls_count",
-              "orderByTime": "ASC",
-              "policy": "default",
-              "queryType": "randomWalk",
-              "refId": "A",
-              "resultFormat": "time_series",
-              "select": [
-                [
-                  {
-                    "params": [
-                      "value"
-                    ],
-                    "type": "field"
-                  },
-                  {
-                    "params": [],
-                    "type": "last"
-                  }
-                ]
-              ],
-              "tags": []
-            }
-          ],
-          "title": "Current Media Streams",
-          "type": "stat"
-        },
-        {
-          "aliasColors": {},
-          "bars": false,
-          "dashLength": 10,
-          "dashes": false,
-          "datasource": {
-            "type": "influxdb",
-            "uid": "PD39DF8CE8C1D829D"
-          },
-          "fill": 1,
-          "fillGradient": 0,
-          "gridPos": {
-            "h": 5,
-            "w": 8,
-            "x": 8,
-            "y": 9
-          },
-          "hiddenSeries": false,
-          "id": 18,
-          "legend": {
-            "avg": false,
-            "current": false,
-            "max": false,
-            "min": false,
-            "show": true,
-            "total": false,
-            "values": false
-          },
-          "lines": true,
-          "linewidth": 1,
-          "nullPointMode": "null",
-          "options": {
-            "alertThreshold": true
-          },
-          "percentage": false,
-          "pluginVersion": "8.3.4",
-          "pointradius": 2,
-          "points": false,
-          "renderer": "flot",
-          "seriesOverrides": [],
-          "spaceLength": 10,
-          "stack": false,
-          "steppedLine": false,
-          "targets": [
-            {
-              "alias": "Active SBC Calls",
-              "groupBy": [
-                {
-                  "params": [
-                    "$__interval"
-                  ],
-                  "type": "time"
-                },
-                {
-                  "params": [
-                    "previous"
-                  ],
-                  "type": "fill"
-                }
+                { "params": ["$__interval"], "type": "time" },
+                { "params": ["host"], "type": "tag" },
+                { "params": ["instance_id"], "type": "tag" },
+                { "params": ["previous"], "type": "fill" }
               ],
               "measurement": "sbc_sip_calls_count",
               "orderByTime": "ASC",
               "policy": "default",
-              "queryType": "randomWalk",
               "refId": "A",
               "resultFormat": "time_series",
-              "select": [
-                [
-                  {
-                    "params": [
-                      "value"
-                    ],
-                    "type": "field"
-                  },
-                  {
-                    "params": [],
-                    "type": "max"
-                  }
-                ]
-              ],
-              "tags": []
-            }
-          ],
-          "thresholds": [],
-          "timeRegions": [],
-          "title": "Total Calls",
-          "tooltip": {
-            "shared": true,
-            "sort": 0,
-            "value_type": "individual"
-          },
-          "type": "graph",
-          "xaxis": {
-            "mode": "time",
-            "show": true,
-            "values": []
-          },
-          "yaxes": [
-            {
-              "$$hashKey": "object:190",
-              "format": "short",
-              "logBase": 1,
-              "show": true
-            },
-            {
-              "$$hashKey": "object:191",
-              "format": "short",
-              "logBase": 1,
-              "show": true
-            }
-          ],
-          "yaxis": {
-            "align": false
-          }
-        },
-        {
-          "aliasColors": {},
-          "bars": false,
-          "dashLength": 10,
-          "dashes": false,
-          "datasource": {
-            "type": "influxdb",
-            "uid": "PD39DF8CE8C1D829D"
-          },
-          "fill": 1,
-          "fillGradient": 0,
-          "gridPos": {
-            "h": 5,
-            "w": 8,
-            "x": 16,
-            "y": 9
-          },
-          "hiddenSeries": false,
-          "id": 13,
-          "legend": {
-            "avg": false,
-            "current": false,
-            "max": false,
-            "min": false,
-            "show": true,
-            "total": false,
-            "values": false
-          },
-          "lines": true,
-          "linewidth": 1,
-          "nullPointMode": "null",
-          "options": {
-            "alertThreshold": true
-          },
-          "percentage": false,
-          "pluginVersion": "8.3.4",
-          "pointradius": 2,
-          "points": false,
-          "renderer": "flot",
-          "seriesOverrides": [],
-          "spaceLength": 10,
-          "stack": false,
-          "steppedLine": false,
-          "targets": [
-            {
-              "groupBy": [
-                {
-                  "params": [
-                    "$__interval"
-                  ],
-                  "type": "time"
-                },
-                {
-                  "params": [
-                    "host"
-                  ],
-                  "type": "tag"
-                },
-                {
-                  "params": [
-                    "none"
-                  ],
-                  "type": "fill"
-                }
-              ],
-              "measurement": "sbc_media_calls_count",
-              "orderByTime": "ASC",
-              "policy": "default",
-              "queryType": "randomWalk",
-              "refId": "A",
-              "resultFormat": "time_series",
-              "select": [
-                [
-                  {
-                    "params": [
-                      "value"
-                    ],
-                    "type": "field"
-                  },
-                  {
-                    "params": [],
-                    "type": "mean"
-                  }
-                ]
-              ],
-              "tags": []
-            }
-          ],
-          "thresholds": [],
-          "timeRegions": [],
-          "title": "SBC Media Calls Count",
-          "tooltip": {
-            "shared": true,
-            "sort": 0,
-            "value_type": "individual"
-          },
-          "type": "graph",
-          "xaxis": {
-            "mode": "time",
-            "show": true,
-            "values": []
-          },
-          "yaxes": [
-            {
-              "$$hashKey": "object:1127",
-              "format": "short",
-              "logBase": 1,
-              "show": true
-            },
-            {
-              "$$hashKey": "object:1128",
-              "format": "short",
-              "logBase": 1,
-              "show": true
-            }
-          ],
-          "yaxis": {
-            "align": false
-          }
-        },
-        {
-          "aliasColors": {},
-          "bars": false,
-          "dashLength": 10,
-          "dashes": false,
-          "datasource": {
-            "type": "influxdb",
-            "uid": "PD39DF8CE8C1D829D"
-          },
-          "fill": 1,
-          "fillGradient": 0,
-          "gridPos": {
-            "h": 5,
-            "w": 8,
-            "x": 0,
-            "y": 14
-          },
-          "hiddenSeries": false,
-          "id": 14,
-          "legend": {
-            "avg": false,
-            "current": false,
-            "max": false,
-            "min": false,
-            "show": true,
-            "total": false,
-            "values": false
-          },
-          "lines": true,
-          "linewidth": 1,
-          "nullPointMode": "null",
-          "options": {
-            "alertThreshold": true
-          },
-          "percentage": false,
-          "pluginVersion": "8.3.4",
-          "pointradius": 2,
-          "points": false,
-          "renderer": "flot",
-          "seriesOverrides": [],
-          "spaceLength": 10,
-          "stack": false,
-          "steppedLine": false,
-          "targets": [
-            {
-              "groupBy": [
-                {
-                  "params": [
-                    "$__interval"
-                  ],
-                  "type": "time"
-                },
-                {
-                  "params": [
-                    "host"
-                  ],
-                  "type": "tag"
-                },
-                {
-                  "params": [
-                    "previous"
-                  ],
-                  "type": "fill"
-                }
-              ],
-              "measurement": "sbc_sip_calls_count",
-              "orderByTime": "ASC",
-              "policy": "default",
-              "queryType": "randomWalk",
-              "refId": "A",
-              "resultFormat": "time_series",
-              "select": [
-                [
-                  {
-                    "params": [
-                      "value"
-                    ],
-                    "type": "field"
-                  },
-                  {
-                    "params": [],
-                    "type": "max"
-                  }
-                ]
-              ],
+              "select": [[
+                { "params": ["value"], "type": "field" },
+                { "params": [], "type": "max" }
+              ]],
               "tags": [
-                {
-                  "key": "direction",
-                  "operator": "=",
-                  "value": "inbound"
-                }
+                { "key": "direction", "operator": "=", "value": "inbound" }
               ]
             }
           ],
-          "thresholds": [],
-          "timeRegions": [],
-          "title": "SBC Inbound Calls",
-          "tooltip": {
-            "shared": true,
-            "sort": 0,
-            "value_type": "individual"
-          },
-          "type": "graph",
-          "xaxis": {
-            "mode": "time",
-            "show": true,
-            "values": []
-          },
-          "yaxes": [
-            {
-              "decimals": 0,
-              "format": "short",
-              "label": "",
-              "logBase": 1,
-              "min": "0",
-              "show": true
-            },
-            {
-              "format": "short",
-              "logBase": 1,
-              "show": true
-            }
-          ],
-          "yaxis": {
-            "align": false
-          }
+          "title": "Total Inbound Calls",
+          "type": "timeseries"
         },
         {
-          "aliasColors": {},
-          "bars": false,
-          "dashLength": 10,
-          "dashes": false,
-          "datasource": {
-            "type": "influxdb",
-            "uid": "PD39DF8CE8C1D829D"
-          },
-          "fill": 1,
-          "fillGradient": 0,
-          "gridPos": {
-            "h": 5,
-            "w": 8,
-            "x": 8,
-            "y": 14
-          },
-          "hiddenSeries": false,
-          "id": 19,
-          "legend": {
-            "avg": false,
-            "current": false,
-            "max": false,
-            "min": false,
-            "show": true,
-            "total": false,
-            "values": false
-          },
-          "lines": true,
-          "linewidth": 1,
-          "nullPointMode": "null",
-          "options": {
-            "alertThreshold": true
-          },
-          "percentage": false,
-          "pluginVersion": "8.3.4",
-          "pointradius": 2,
-          "points": false,
-          "renderer": "flot",
-          "seriesOverrides": [],
-          "spaceLength": 10,
-          "stack": false,
-          "steppedLine": false,
-          "targets": [
-            {
-              "groupBy": [
-                {
-                  "params": [
-                    "$__interval"
-                  ],
-                  "type": "time"
-                },
-                {
-                  "params": [
-                    "host"
-                  ],
-                  "type": "tag"
-                },
-                {
-                  "params": [
-                    "previous"
-                  ],
-                  "type": "fill"
-                }
-              ],
-              "measurement": "sbc_sip_calls_count",
-              "orderByTime": "ASC",
-              "policy": "default",
-              "queryType": "randomWalk",
-              "refId": "A",
-              "resultFormat": "time_series",
-              "select": [
-                [
-                  {
-                    "params": [
-                      "value"
-                    ],
-                    "type": "field"
-                  },
-                  {
-                    "params": [],
-                    "type": "max"
-                  }
+          "datasource": { "type": "influxdb", "uid": "influxdb-telegraf" },
+          "fieldConfig": {
+            "defaults": {
+              "color": { "mode": "palette-classic" },
+              "custom": {
+                "axisBorderShow": false,
+                "axisCenteredZero": false,
+                "axisColorMode": "text",
+                "axisLabel": "",
+                "axisPlacement": "auto",
+                "barAlignment": 0,
+                "drawStyle": "line",
+                "fillOpacity": 10,
+                "gradientMode": "none",
+                "hideFrom": { "legend": false, "tooltip": false, "viz": false },
+                "insertNulls": false,
+                "lineInterpolation": "linear",
+                "lineWidth": 1,
+                "pointSize": 5,
+                "scaleDistribution": { "type": "linear" },
+                "showPoints": "auto",
+                "spanNulls": false,
+                "stacking": { "group": "A", "mode": "none" },
+                "thresholdsStyle": { "mode": "off" }
+              },
+              "decimals": 0,
+              "mappings": [],
+              "min": 0,
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  { "color": "green", "value": null },
+                  { "color": "red", "value": 80 }
                 ]
-              ],
-              "tags": [
-                {
-                  "key": "direction",
-                  "operator": "=",
-                  "value": "outbound"
-                }
-              ]
-            }
-          ],
-          "thresholds": [],
-          "timeRegions": [],
-          "title": "SBC Outbound Calls",
-          "tooltip": {
-            "shared": true,
-            "sort": 0,
-            "value_type": "individual"
-          },
-          "type": "graph",
-          "xaxis": {
-            "mode": "time",
-            "show": true,
-            "values": []
-          },
-          "yaxes": [
-            {
-              "decimals": 0,
-              "format": "short",
-              "label": "",
-              "logBase": 1,
-              "min": "0",
-              "show": true
+              },
+              "unit": "short"
             },
-            {
-              "format": "short",
-              "logBase": 1,
-              "show": true
-            }
-          ],
-          "yaxis": {
-            "align": false
-          }
-        },
-        {
-          "aliasColors": {},
-          "bars": false,
-          "dashLength": 10,
-          "dashes": false,
-          "datasource": {
-            "type": "influxdb",
-            "uid": "PD39DF8CE8C1D829D"
+            "overrides": []
           },
-          "fill": 1,
-          "fillGradient": 0,
-          "gridPos": {
-            "h": 5,
-            "w": 8,
-            "x": 16,
-            "y": 14
-          },
-          "hiddenSeries": false,
-          "id": 2,
-          "legend": {
-            "avg": false,
-            "current": false,
-            "max": false,
-            "min": false,
-            "show": true,
-            "total": false,
-            "values": false
-          },
-          "lines": true,
-          "linewidth": 1,
-          "nullPointMode": "null",
+          "gridPos": { "h": 5, "w": 8, "x": 0, "y": 17 },
+          "id": 11,
           "options": {
-            "alertThreshold": true
+            "legend": { "calcs": [], "displayMode": "list", "placement": "bottom", "showLegend": true },
+            "tooltip": { "mode": "single", "sort": "none" }
           },
-          "percentage": false,
-          "pluginVersion": "8.3.4",
-          "pointradius": 2,
-          "points": false,
-          "renderer": "flot",
-          "seriesOverrides": [],
-          "spaceLength": 10,
-          "stack": false,
-          "steppedLine": false,
           "targets": [
             {
-              "alias": "Active calls per freeswitch",
+              "datasource": { "type": "influxdb", "uid": "influxdb-telegraf" },
+              "alias": "$tag_host",
               "groupBy": [
-                {
-                  "params": [
-                    "$__interval"
-                  ],
-                  "type": "time"
-                },
-                {
-                  "params": [
-                    "host"
-                  ],
-                  "type": "tag"
-                },
-                {
-                  "params": [
-                    "previous"
-                  ],
-                  "type": "fill"
-                }
+                { "params": ["$__interval"], "type": "time" },
+                { "params": ["host"], "type": "tag" },
+                { "params": ["previous"], "type": "fill" }
               ],
               "measurement": "fs_sip_calls_count",
               "orderByTime": "ASC",
               "policy": "default",
-              "queryType": "randomWalk",
               "refId": "A",
               "resultFormat": "time_series",
-              "select": [
-                [
-                  {
-                    "params": [
-                      "value"
-                    ],
-                    "type": "field"
-                  },
-                  {
-                    "params": [],
-                    "type": "max"
-                  }
-                ]
-              ],
+              "select": [[
+                { "params": ["value"], "type": "field" },
+                { "params": [], "type": "max" }
+              ]],
               "tags": []
             }
           ],
-          "thresholds": [],
-          "timeRegions": [],
           "title": "Feature Server Calls",
-          "tooltip": {
-            "shared": true,
-            "sort": 0,
-            "value_type": "individual"
-          },
-          "type": "graph",
-          "xaxis": {
-            "mode": "time",
-            "show": true,
-            "values": []
-          },
-          "yaxes": [
-            {
-              "format": "short",
-              "logBase": 1,
-              "show": true
-            },
-            {
-              "format": "short",
-              "logBase": 1,
-              "show": true
-            }
-          ],
-          "yaxis": {
-            "align": false
-          }
+          "type": "timeseries"
         },
         {
-          "aliasColors": {},
-          "bars": false,
-          "dashLength": 10,
-          "dashes": false,
-          "datasource": {
-            "type": "influxdb",
-            "uid": "PD39DF8CE8C1D829D"
-          },
-          "description": "",
-          "fill": 1,
-          "fillGradient": 0,
-          "gridPos": {
-            "h": 5,
-            "w": 8,
-            "x": 0,
-            "y": 19
-          },
-          "hiddenSeries": false,
-          "id": 20,
-          "legend": {
-            "avg": false,
-            "current": false,
-            "max": false,
-            "min": false,
-            "show": true,
-            "total": false,
-            "values": false
-          },
-          "lines": true,
-          "linewidth": 1,
-          "nullPointMode": "null",
-          "options": {
-            "alertThreshold": true
-          },
-          "percentage": false,
-          "pluginVersion": "8.3.4",
-          "pointradius": 2,
-          "points": false,
-          "renderer": "flot",
-          "seriesOverrides": [],
-          "spaceLength": 10,
-          "stack": false,
-          "steppedLine": false,
-          "targets": [
-            {
-              "alias": "average",
-              "groupBy": [
-                {
-                  "params": [
-                    "$__interval"
-                  ],
-                  "type": "time"
-                },
-                {
-                  "params": [
-                    "null"
-                  ],
-                  "type": "fill"
-                }
-              ],
-              "measurement": "app_hook_response_time",
-              "orderByTime": "ASC",
-              "policy": "default",
-              "queryType": "randomWalk",
-              "refId": "A",
-              "resultFormat": "time_series",
-              "select": [
-                [
-                  {
-                    "params": [
-                      "mean"
-                    ],
-                    "type": "field"
-                  },
-                  {
-                    "params": [],
-                    "type": "mean"
-                  }
-                ]
-              ],
-              "tags": []
-            },
-            {
-              "alias": "99th percentile",
-              "groupBy": [
-                {
-                  "params": [
-                    "$__interval"
-                  ],
-                  "type": "time"
-                },
-                {
-                  "params": [
-                    "null"
-                  ],
-                  "type": "fill"
-                }
-              ],
-              "measurement": "app_hook_response_time",
-              "orderByTime": "ASC",
-              "policy": "default",
-              "refId": "B",
-              "resultFormat": "time_series",
-              "select": [
-                [
-                  {
-                    "params": [
-                      "99_percentile"
-                    ],
-                    "type": "field"
-                  },
-                  {
-                    "params": [],
-                    "type": "mean"
-                  }
-                ]
-              ],
-              "tags": []
-            },
-            {
-              "alias": "Lower",
-              "groupBy": [
-                {
-                  "params": [
-                    "$__interval"
-                  ],
-                  "type": "time"
-                },
-                {
-                  "params": [
-                    "null"
-                  ],
-                  "type": "fill"
-                }
-              ],
-              "hide": false,
-              "measurement": "app_hook_response_time",
-              "orderByTime": "ASC",
-              "policy": "default",
-              "refId": "C",
-              "resultFormat": "time_series",
-              "select": [
-                [
-                  {
-                    "params": [
-                      "lower"
-                    ],
-                    "type": "field"
-                  },
-                  {
-                    "params": [],
-                    "type": "mean"
-                  }
-                ]
-              ],
-              "tags": []
-            }
-          ],
-          "thresholds": [],
-          "timeRegions": [],
-          "title": "Webhook  Response Time",
-          "tooltip": {
-            "shared": true,
-            "sort": 0,
-            "value_type": "individual"
-          },
-          "type": "graph",
-          "xaxis": {
-            "mode": "time",
-            "show": true,
-            "values": []
-          },
-          "yaxes": [
-            {
-              "$$hashKey": "object:495",
-              "decimals": 0,
-              "format": "short",
-              "label": "",
-              "logBase": 1,
-              "min": "0",
-              "show": true
-            },
-            {
-              "$$hashKey": "object:496",
-              "format": "short",
-              "logBase": 1,
-              "show": true
-            }
-          ],
-          "yaxis": {
-            "align": false
-          }
-        },
-        {
-          "aliasColors": {},
-          "bars": false,
-          "dashLength": 10,
-          "dashes": false,
-          "datasource": {
-            "type": "influxdb",
-            "uid": "PD39DF8CE8C1D829D"
-          },
-          "fill": 1,
-          "fillGradient": 0,
-          "gridPos": {
-            "h": 5,
-            "w": 8,
-            "x": 8,
-            "y": 19
-          },
-          "hiddenSeries": false,
-          "id": 12,
-          "legend": {
-            "avg": false,
-            "current": false,
-            "max": false,
-            "min": false,
-            "show": true,
-            "total": false,
-            "values": false
-          },
-          "lines": true,
-          "linewidth": 1,
-          "nullPointMode": "null",
-          "options": {
-            "alertThreshold": true
-          },
-          "percentage": false,
-          "pluginVersion": "8.3.4",
-          "pointradius": 2,
-          "points": false,
-          "renderer": "flot",
-          "seriesOverrides": [],
-          "spaceLength": 10,
-          "stack": false,
-          "steppedLine": false,
-          "targets": [
-            {
-              "alias": "average",
-              "groupBy": [
-                {
-                  "params": [
-                    "$__interval"
-                  ],
-                  "type": "time"
-                },
-                {
-                  "params": [
-                    "none"
-                  ],
-                  "type": "fill"
-                }
-              ],
-              "measurement": "tts_response_time",
-              "orderByTime": "ASC",
-              "policy": "default",
-              "queryType": "randomWalk",
-              "refId": "A",
-              "resultFormat": "time_series",
-              "select": [
-                [
-                  {
-                    "params": [
-                      "mean"
-                    ],
-                    "type": "field"
-                  },
-                  {
-                    "params": [],
-                    "type": "mean"
-                  }
-                ]
-              ],
-              "tags": []
-            },
-            {
-              "alias": "99%",
-              "groupBy": [
-                {
-                  "params": [
-                    "$__interval"
-                  ],
-                  "type": "time"
-                },
-                {
-                  "params": [
-                    "null"
-                  ],
-                  "type": "fill"
-                }
-              ],
-              "measurement": "tts_response_time",
-              "orderByTime": "ASC",
-              "policy": "default",
-              "refId": "B",
-              "resultFormat": "time_series",
-              "select": [
-                [
-                  {
-                    "params": [
-                      "99_percentile"
-                    ],
-                    "type": "field"
-                  },
-                  {
-                    "params": [],
-                    "type": "mean"
-                  }
-                ]
-              ],
-              "tags": []
-            }
-          ],
-          "thresholds": [],
-          "timeRegions": [],
-          "title": "Google TTS Response Time",
-          "tooltip": {
-            "shared": true,
-            "sort": 0,
-            "value_type": "individual"
-          },
-          "type": "graph",
-          "xaxis": {
-            "mode": "time",
-            "show": true,
-            "values": []
-          },
-          "yaxes": [
-            {
-              "$$hashKey": "object:915",
-              "format": "short",
-              "logBase": 1,
-              "show": true
-            },
-            {
-              "$$hashKey": "object:916",
-              "format": "short",
-              "logBase": 1,
-              "show": true
-            }
-          ],
-          "yaxis": {
-            "align": false
-          }
-        },
-        {
-          "aliasColors": {},
-          "bars": false,
-          "dashLength": 10,
-          "dashes": false,
-          "datasource": {
-            "type": "influxdb",
-            "uid": "PD39DF8CE8C1D829D"
-          },
-          "description": "",
-          "fill": 1,
-          "fillGradient": 0,
-          "gridPos": {
-            "h": 5,
-            "w": 8,
-            "x": 16,
-            "y": 19
-          },
-          "hiddenSeries": false,
-          "id": 7,
-          "legend": {
-            "avg": false,
-            "current": false,
-            "max": false,
-            "min": false,
-            "show": true,
-            "total": false,
-            "values": false
-          },
-          "lines": true,
-          "linewidth": 1,
-          "nullPointMode": "null",
-          "options": {
-            "alertThreshold": true
-          },
-          "percentage": false,
-          "pluginVersion": "8.3.4",
-          "pointradius": 2,
-          "points": false,
-          "renderer": "flot",
-          "seriesOverrides": [],
-          "spaceLength": 10,
-          "stack": false,
-          "steppedLine": false,
-          "targets": [
-            {
-              "alias": "total requests",
-              "groupBy": [
-                {
-                  "params": [
-                    "$__interval"
-                  ],
-                  "type": "time"
-                },
-                {
-                  "params": [
-                    "host"
-                  ],
-                  "type": "tag"
-                },
-                {
-                  "params": [
-                    "0"
-                  ],
-                  "type": "fill"
-                }
-              ],
-              "measurement": "tts_cache_requests",
-              "orderByTime": "ASC",
-              "policy": "default",
-              "queryType": "randomWalk",
-              "refId": "A",
-              "resultFormat": "time_series",
-              "select": [
-                [
-                  {
-                    "params": [
-                      "value"
-                    ],
-                    "type": "field"
-                  },
-                  {
-                    "params": [],
-                    "type": "count"
-                  }
-                ]
-              ],
-              "tags": []
-            },
-            {
-              "alias": "served from cache",
-              "groupBy": [
-                {
-                  "params": [
-                    "$__interval"
-                  ],
-                  "type": "time"
-                },
-                {
-                  "params": [
-                    "0"
-                  ],
-                  "type": "fill"
-                }
-              ],
-              "measurement": "tts_cache_requests",
-              "orderByTime": "ASC",
-              "policy": "default",
-              "query": "SELECT mean(\"value\") FROM \"tts_cache_requests\" WHERE (\"found\" = 'yes') AND $timeFilter GROUP BY time($__interval) fill(null)",
-              "rawQuery": false,
-              "refId": "B",
-              "resultFormat": "time_series",
-              "select": [
-                [
-                  {
-                    "params": [
-                      "value"
-                    ],
-                    "type": "field"
-                  },
-                  {
-                    "params": [],
-                    "type": "count"
-                  }
-                ]
-              ],
-              "tags": [
-                {
-                  "key": "found",
-                  "operator": "=",
-                  "value": "yes"
-                }
-              ]
-            }
-          ],
-          "thresholds": [],
-          "timeRegions": [],
-          "title": "TTS Cache Hits",
-          "tooltip": {
-            "shared": true,
-            "sort": 0,
-            "value_type": "individual"
-          },
-          "type": "graph",
-          "xaxis": {
-            "mode": "time",
-            "show": true,
-            "values": []
-          },
-          "yaxes": [
-            {
-              "format": "short",
-              "logBase": 1,
-              "show": true
-            },
-            {
-              "format": "short",
-              "logBase": 1,
-              "show": true
-            }
-          ],
-          "yaxis": {
-            "align": false
-          }
-        },
-        {
-          "aliasColors": {},
-          "bars": false,
-          "dashLength": 10,
-          "dashes": false,
-          "datasource": {
-            "type": "influxdb",
-            "uid": "PD39DF8CE8C1D829D"
-          },
-          "fill": 1,
-          "fillGradient": 0,
-          "gridPos": {
-            "h": 5,
-            "w": 8,
-            "x": 0,
-            "y": 24
-          },
-          "hiddenSeries": false,
-          "id": 5,
-          "legend": {
-            "avg": false,
-            "current": false,
-            "max": false,
-            "min": false,
-            "show": true,
-            "total": false,
-            "values": false
-          },
-          "lines": true,
-          "linewidth": 1,
-          "nullPointMode": "null",
-          "options": {
-            "alertThreshold": true
-          },
-          "percentage": false,
-          "pluginVersion": "8.3.4",
-          "pointradius": 2,
-          "points": false,
-          "renderer": "flot",
-          "seriesOverrides": [],
-          "spaceLength": 10,
-          "stack": false,
-          "steppedLine": false,
-          "targets": [
-            {
-              "groupBy": [
-                {
-                  "params": [
-                    "$__interval"
-                  ],
-                  "type": "time"
-                },
-                {
-                  "params": [
-                    "host"
-                  ],
-                  "type": "tag"
-                },
-                {
-                  "params": [
-                    "none"
-                  ],
-                  "type": "fill"
-                }
-              ],
-              "measurement": "sbc_invites",
-              "orderByTime": "ASC",
-              "policy": "default",
-              "queryType": "randomWalk",
-              "refId": "A",
-              "resultFormat": "time_series",
-              "select": [
-                [
-                  {
-                    "params": [
-                      "value"
-                    ],
-                    "type": "field"
-                  },
-                  {
-                    "params": [],
-                    "type": "count"
-                  }
-                ]
-              ],
-              "tags": []
-            }
-          ],
-          "thresholds": [],
-          "timeRegions": [],
-          "title": "SBC Invites",
-          "tooltip": {
-            "shared": true,
-            "sort": 0,
-            "value_type": "individual"
-          },
-          "type": "graph",
-          "xaxis": {
-            "mode": "time",
-            "show": true,
-            "values": []
-          },
-          "yaxes": [
-            {
-              "format": "short",
-              "logBase": 1,
-              "show": true
-            },
-            {
-              "format": "short",
-              "logBase": 1,
-              "show": true
-            }
-          ],
-          "yaxis": {
-            "align": false
-          }
-        },
-        {
-          "aliasColors": {},
-          "bars": false,
-          "dashLength": 10,
-          "dashes": false,
-          "datasource": {
-            "type": "influxdb",
-            "uid": "PD39DF8CE8C1D829D"
-          },
-          "description": "",
-          "fill": 1,
-          "fillGradient": 0,
-          "gridPos": {
-            "h": 5,
-            "w": 8,
-            "x": 8,
-            "y": 24
-          },
-          "hiddenSeries": false,
-          "id": 6,
-          "legend": {
-            "avg": false,
-            "current": false,
-            "max": false,
-            "min": false,
-            "show": true,
-            "total": false,
-            "values": false
-          },
-          "lines": true,
-          "linewidth": 1,
-          "nullPointMode": "null",
-          "options": {
-            "alertThreshold": true
-          },
-          "percentage": false,
-          "pluginVersion": "8.3.4",
-          "pointradius": 2,
-          "points": false,
-          "renderer": "flot",
-          "seriesOverrides": [],
-          "spaceLength": 10,
-          "stack": false,
-          "steppedLine": false,
-          "targets": [
-            {
-              "alias": "users",
-              "datasource": {
-                "type": "influxdb",
-                "uid": "PD39DF8CE8C1D829D"
+          "datasource": { "type": "influxdb", "uid": "influxdb-telegraf" },
+          "fieldConfig": {
+            "defaults": {
+              "color": { "mode": "palette-classic" },
+              "custom": {
+                "axisBorderShow": false,
+                "axisCenteredZero": false,
+                "axisColorMode": "text",
+                "axisLabel": "",
+                "axisPlacement": "auto",
+                "barAlignment": 0,
+                "drawStyle": "line",
+                "fillOpacity": 10,
+                "gradientMode": "none",
+                "hideFrom": { "legend": false, "tooltip": false, "viz": false },
+                "insertNulls": false,
+                "lineInterpolation": "linear",
+                "lineWidth": 1,
+                "pointSize": 5,
+                "scaleDistribution": { "type": "linear" },
+                "showPoints": "auto",
+                "spanNulls": false,
+                "stacking": { "group": "A", "mode": "none" },
+                "thresholdsStyle": { "mode": "off" }
               },
+              "decimals": 0,
+              "mappings": [],
+              "min": 0,
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  { "color": "green", "value": null },
+                  { "color": "red", "value": 80 }
+                ]
+              },
+              "unit": "ms"
+            },
+            "overrides": []
+          },
+          "gridPos": { "h": 5, "w": 8, "x": 8, "y": 17 },
+          "id": 12,
+          "options": {
+            "legend": { "calcs": [], "displayMode": "list", "placement": "bottom", "showLegend": true },
+            "tooltip": { "mode": "single", "sort": "none" }
+          },
+          "targets": [
+            {
+              "datasource": { "type": "influxdb", "uid": "influxdb-telegraf" },
+              "alias": "average",
               "groupBy": [
-                {
-                  "params": [
-                    "$__interval"
-                  ],
-                  "type": "time"
-                },
-                {
-                  "params": [
-                    "none"
-                  ],
-                  "type": "fill"
-                }
+                { "params": ["$__interval"], "type": "time" },
+                { "params": ["null"], "type": "fill" }
+              ],
+              "measurement": "app_hook_response_time",
+              "orderByTime": "ASC",
+              "policy": "default",
+              "refId": "A",
+              "resultFormat": "time_series",
+              "select": [[
+                { "params": ["mean"], "type": "field" },
+                { "params": [], "type": "mean" }
+              ]],
+              "tags": []
+            },
+            {
+              "datasource": { "type": "influxdb", "uid": "influxdb-telegraf" },
+              "alias": "90th percentile",
+              "groupBy": [
+                { "params": ["$__interval"], "type": "time" },
+                { "params": ["null"], "type": "fill" }
+              ],
+              "measurement": "app_hook_response_time",
+              "orderByTime": "ASC",
+              "policy": "default",
+              "refId": "B",
+              "resultFormat": "time_series",
+              "select": [[
+                { "params": ["90_percentile"], "type": "field" },
+                { "params": [], "type": "mean" }
+              ]],
+              "tags": []
+            }
+          ],
+          "title": "Webhook Response Time",
+          "type": "timeseries"
+        },
+        {
+          "datasource": { "type": "influxdb", "uid": "influxdb-telegraf" },
+          "fieldConfig": {
+            "defaults": {
+              "color": { "mode": "palette-classic" },
+              "custom": {
+                "axisBorderShow": false,
+                "axisCenteredZero": false,
+                "axisColorMode": "text",
+                "axisLabel": "",
+                "axisPlacement": "auto",
+                "barAlignment": 0,
+                "drawStyle": "line",
+                "fillOpacity": 10,
+                "gradientMode": "none",
+                "hideFrom": { "legend": false, "tooltip": false, "viz": false },
+                "insertNulls": false,
+                "lineInterpolation": "linear",
+                "lineWidth": 1,
+                "pointSize": 5,
+                "scaleDistribution": { "type": "linear" },
+                "showPoints": "auto",
+                "spanNulls": false,
+                "stacking": { "group": "A", "mode": "none" },
+                "thresholdsStyle": { "mode": "off" }
+              },
+              "decimals": 0,
+              "mappings": [],
+              "min": 0,
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  { "color": "green", "value": null },
+                  { "color": "red", "value": 80 }
+                ]
+              },
+              "unit": "ms"
+            },
+            "overrides": []
+          },
+          "gridPos": { "h": 5, "w": 8, "x": 16, "y": 17 },
+          "id": 13,
+          "options": {
+            "legend": { "calcs": [], "displayMode": "list", "placement": "bottom", "showLegend": true },
+            "tooltip": { "mode": "single", "sort": "none" }
+          },
+          "targets": [
+            {
+              "datasource": { "type": "influxdb", "uid": "influxdb-telegraf" },
+              "groupBy": [
+                { "params": ["$__interval"], "type": "time" },
+                { "params": ["null"], "type": "fill" }
+              ],
+              "measurement": "app_mysql_response_time",
+              "orderByTime": "ASC",
+              "policy": "default",
+              "refId": "A",
+              "resultFormat": "time_series",
+              "select": [[
+                { "params": ["mean"], "type": "field" },
+                { "params": [], "type": "mean" }
+              ]],
+              "tags": []
+            }
+          ],
+          "title": "MySQL Response Time",
+          "type": "timeseries"
+        },
+        {
+          "datasource": { "type": "influxdb", "uid": "influxdb-telegraf" },
+          "fieldConfig": {
+            "defaults": {
+              "color": { "mode": "palette-classic" },
+              "custom": {
+                "axisBorderShow": false,
+                "axisCenteredZero": false,
+                "axisColorMode": "text",
+                "axisLabel": "",
+                "axisPlacement": "auto",
+                "barAlignment": 0,
+                "drawStyle": "line",
+                "fillOpacity": 10,
+                "gradientMode": "none",
+                "hideFrom": { "legend": false, "tooltip": false, "viz": false },
+                "insertNulls": false,
+                "lineInterpolation": "linear",
+                "lineWidth": 1,
+                "pointSize": 5,
+                "scaleDistribution": { "type": "linear" },
+                "showPoints": "auto",
+                "spanNulls": false,
+                "stacking": { "group": "A", "mode": "none" },
+                "thresholdsStyle": { "mode": "off" }
+              },
+              "decimals": 0,
+              "mappings": [],
+              "min": 0,
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  { "color": "green", "value": null },
+                  { "color": "red", "value": 80 }
+                ]
+              },
+              "unit": "ms"
+            },
+            "overrides": []
+          },
+          "gridPos": { "h": 5, "w": 8, "x": 0, "y": 22 },
+          "id": 14,
+          "options": {
+            "legend": { "calcs": [], "displayMode": "list", "placement": "bottom", "showLegend": true },
+            "tooltip": { "mode": "single", "sort": "none" }
+          },
+          "targets": [
+            {
+              "datasource": { "type": "influxdb", "uid": "influxdb-telegraf" },
+              "alias": "$tag_vendor",
+              "groupBy": [
+                { "params": ["$__interval"], "type": "time" },
+                { "params": ["vendor"], "type": "tag" },
+                { "params": ["none"], "type": "fill" }
+              ],
+              "measurement": "tts_response_time",
+              "orderByTime": "ASC",
+              "policy": "default",
+              "refId": "A",
+              "resultFormat": "time_series",
+              "select": [[
+                { "params": ["mean"], "type": "field" },
+                { "params": [], "type": "mean" }
+              ]],
+              "tags": []
+            }
+          ],
+          "title": "TTS Response Time",
+          "type": "timeseries"
+        },
+        {
+          "datasource": { "type": "influxdb", "uid": "influxdb-telegraf" },
+          "fieldConfig": {
+            "defaults": {
+              "color": { "mode": "palette-classic" },
+              "custom": {
+                "axisBorderShow": false,
+                "axisCenteredZero": false,
+                "axisColorMode": "text",
+                "axisLabel": "",
+                "axisPlacement": "auto",
+                "barAlignment": 0,
+                "drawStyle": "line",
+                "fillOpacity": 10,
+                "gradientMode": "none",
+                "hideFrom": { "legend": false, "tooltip": false, "viz": false },
+                "insertNulls": false,
+                "lineInterpolation": "linear",
+                "lineWidth": 1,
+                "pointSize": 5,
+                "scaleDistribution": { "type": "linear" },
+                "showPoints": "auto",
+                "spanNulls": false,
+                "stacking": { "group": "A", "mode": "none" },
+                "thresholdsStyle": { "mode": "off" }
+              },
+              "decimals": 0,
+              "mappings": [],
+              "min": 0,
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  { "color": "green", "value": null },
+                  { "color": "red", "value": 80 }
+                ]
+              },
+              "unit": "ms"
+            },
+            "overrides": []
+          },
+          "gridPos": { "h": 5, "w": 8, "x": 8, "y": 22 },
+          "id": 15,
+          "options": {
+            "legend": { "calcs": [], "displayMode": "list", "placement": "bottom", "showLegend": true },
+            "tooltip": { "mode": "single", "sort": "none" }
+          },
+          "targets": [
+            {
+              "datasource": { "type": "influxdb", "uid": "influxdb-telegraf" },
+              "groupBy": [
+                { "params": ["$__interval"], "type": "time" },
+                { "params": ["null"], "type": "fill" }
+              ],
+              "measurement": "app_rtpengine_response_time",
+              "orderByTime": "ASC",
+              "policy": "default",
+              "refId": "A",
+              "resultFormat": "time_series",
+              "select": [[
+                { "params": ["mean"], "type": "field" },
+                { "params": [], "type": "mean" }
+              ]],
+              "tags": []
+            }
+          ],
+          "title": "Rtpengine Response Time",
+          "type": "timeseries"
+        },
+        {
+          "datasource": { "type": "influxdb", "uid": "influxdb-telegraf" },
+          "fieldConfig": {
+            "defaults": {
+              "color": { "mode": "palette-classic" },
+              "custom": {
+                "axisBorderShow": false,
+                "axisCenteredZero": false,
+                "axisColorMode": "text",
+                "axisLabel": "",
+                "axisPlacement": "auto",
+                "barAlignment": 0,
+                "drawStyle": "line",
+                "fillOpacity": 10,
+                "gradientMode": "none",
+                "hideFrom": { "legend": false, "tooltip": false, "viz": false },
+                "insertNulls": false,
+                "lineInterpolation": "linear",
+                "lineWidth": 1,
+                "pointSize": 5,
+                "scaleDistribution": { "type": "linear" },
+                "showPoints": "auto",
+                "spanNulls": false,
+                "stacking": { "group": "A", "mode": "none" },
+                "thresholdsStyle": { "mode": "off" }
+              },
+              "decimals": 0,
+              "mappings": [],
+              "min": 0,
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  { "color": "green", "value": null },
+                  { "color": "red", "value": 80 }
+                ]
+              },
+              "unit": "none"
+            },
+            "overrides": []
+          },
+          "gridPos": { "h": 5, "w": 8, "x": 16, "y": 22 },
+          "id": 16,
+          "options": {
+            "legend": { "calcs": [], "displayMode": "list", "placement": "bottom", "showLegend": true },
+            "tooltip": { "mode": "single", "sort": "none" }
+          },
+          "targets": [
+            {
+              "datasource": { "type": "influxdb", "uid": "influxdb-telegraf" },
+              "alias": "$tag_host",
+              "groupBy": [
+                { "params": ["$__interval"], "type": "time" },
+                { "params": ["host"], "type": "tag" },
+                { "params": ["none"], "type": "fill" }
               ],
               "measurement": "sbc_users_count",
               "orderByTime": "ASC",
               "policy": "default",
-              "queryType": "randomWalk",
               "refId": "A",
               "resultFormat": "time_series",
-              "select": [
-                [
-                  {
-                    "params": [
-                      "value"
-                    ],
-                    "type": "field"
-                  },
-                  {
-                    "params": [],
-                    "type": "max"
-                  }
-                ]
-              ],
+              "select": [[
+                { "params": ["value"], "type": "field" },
+                { "params": [], "type": "max" }
+              ]],
               "tags": []
             }
           ],
-          "thresholds": [],
-          "timeRegions": [],
-          "title": "Registered Users",
-          "tooltip": {
-            "shared": true,
-            "sort": 0,
-            "value_type": "individual"
-          },
-          "type": "graph",
-          "xaxis": {
-            "mode": "time",
-            "show": true,
-            "values": []
-          },
-          "yaxes": [
-            {
-              "$$hashKey": "object:306",
-              "decimals": 0,
-              "format": "short",
-              "label": "",
-              "logBase": 1,
-              "show": true
-            },
-            {
-              "$$hashKey": "object:307",
-              "format": "short",
-              "logBase": 1,
-              "show": true
-            }
-          ],
-          "yaxis": {
-            "align": false
-          }
+          "title": "Active registrations",
+          "type": "timeseries"
         },
         {
-          "aliasColors": {},
-          "bars": false,
-          "dashLength": 10,
-          "dashes": false,
-          "datasource": {
-            "type": "influxdb",
-            "uid": "PD39DF8CE8C1D829D"
+          "datasource": { "type": "influxdb", "uid": "influxdb-telegraf" },
+          "fieldConfig": {
+            "defaults": {
+              "color": { "mode": "palette-classic" },
+              "custom": {
+                "axisBorderShow": false,
+                "axisCenteredZero": false,
+                "axisColorMode": "text",
+                "axisLabel": "",
+                "axisPlacement": "auto",
+                "barAlignment": 0,
+                "drawStyle": "line",
+                "fillOpacity": 10,
+                "gradientMode": "none",
+                "hideFrom": { "legend": false, "tooltip": false, "viz": false },
+                "insertNulls": false,
+                "lineInterpolation": "linear",
+                "lineWidth": 1,
+                "pointSize": 5,
+                "scaleDistribution": { "type": "linear" },
+                "showPoints": "auto",
+                "spanNulls": false,
+                "stacking": { "group": "A", "mode": "none" },
+                "thresholdsStyle": { "mode": "off" }
+              },
+              "decimals": 0,
+              "mappings": [],
+              "min": 0,
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  { "color": "green", "value": null },
+                  { "color": "red", "value": 80 }
+                ]
+              },
+              "unit": "short"
+            },
+            "overrides": []
           },
-          "description": "",
-          "fill": 1,
-          "fillGradient": 0,
-          "gridPos": {
-            "h": 5,
-            "w": 8,
-            "x": 16,
-            "y": 24
-          },
-          "hiddenSeries": false,
-          "id": 4,
-          "legend": {
-            "avg": false,
-            "current": false,
-            "max": false,
-            "min": false,
-            "show": true,
-            "total": false,
-            "values": false
-          },
-          "lines": true,
-          "linewidth": 1,
-          "nullPointMode": "null",
+          "gridPos": { "h": 5, "w": 8, "x": 0, "y": 27 },
+          "id": 17,
           "options": {
-            "alertThreshold": true
+            "legend": { "calcs": [], "displayMode": "list", "placement": "bottom", "showLegend": true },
+            "tooltip": { "mode": "single", "sort": "none" }
           },
-          "percentage": false,
-          "pluginVersion": "8.3.4",
-          "pointradius": 2,
-          "points": false,
-          "renderer": "flot",
-          "seriesOverrides": [],
-          "spaceLength": 10,
-          "stack": false,
-          "steppedLine": false,
           "targets": [
             {
-              "alias": "Channels in use",
-              "datasource": {
-                "type": "influxdb",
-                "uid": "PD39DF8CE8C1D829D"
-              },
+              "datasource": { "type": "influxdb", "uid": "influxdb-telegraf" },
+              "alias": "total requests",
               "groupBy": [
-                {
-                  "params": [
-                    "$__interval"
-                  ],
-                  "type": "time"
-                },
-                {
-                  "params": [
-                    "host"
-                  ],
-                  "type": "tag"
-                },
-                {
-                  "params": [
-                    "previous"
-                  ],
-                  "type": "fill"
-                }
+                { "params": ["$__interval"], "type": "time" },
+                { "params": ["host"], "type": "tag" },
+                { "params": ["0"], "type": "fill" }
               ],
-              "measurement": "fs_media_channels_in_use",
+              "measurement": "tts_cache_requests",
               "orderByTime": "ASC",
               "policy": "default",
-              "queryType": "randomWalk",
               "refId": "A",
               "resultFormat": "time_series",
-              "select": [
-                [
-                  {
-                    "params": [
-                      "value"
-                    ],
-                    "type": "field"
-                  },
-                  {
-                    "params": [],
-                    "type": "max"
-                  }
-                ]
+              "select": [[
+                { "params": ["value"], "type": "field" },
+                { "params": [], "type": "count" }
+              ]],
+              "tags": []
+            },
+            {
+              "datasource": { "type": "influxdb", "uid": "influxdb-telegraf" },
+              "alias": "served from cache",
+              "groupBy": [
+                { "params": ["$__interval"], "type": "time" },
+                { "params": ["0"], "type": "fill" }
               ],
+              "measurement": "tts_cache_requests",
+              "orderByTime": "ASC",
+              "policy": "default",
+              "refId": "B",
+              "resultFormat": "time_series",
+              "select": [[
+                { "params": ["value"], "type": "field" },
+                { "params": [], "type": "count" }
+              ]],
+              "tags": [
+                { "key": "found", "operator": "=", "value": "yes" }
+              ]
+            }
+          ],
+          "title": "TTS Cache Hits",
+          "type": "timeseries"
+        },
+        {
+          "datasource": { "type": "influxdb", "uid": "influxdb-telegraf" },
+          "fieldConfig": {
+            "defaults": {
+              "color": { "mode": "palette-classic" },
+              "custom": {
+                "axisBorderShow": false,
+                "axisCenteredZero": false,
+                "axisColorMode": "text",
+                "axisLabel": "",
+                "axisPlacement": "auto",
+                "barAlignment": 0,
+                "drawStyle": "line",
+                "fillOpacity": 10,
+                "gradientMode": "none",
+                "hideFrom": { "legend": false, "tooltip": false, "viz": false },
+                "insertNulls": false,
+                "lineInterpolation": "linear",
+                "lineWidth": 1,
+                "pointSize": 5,
+                "scaleDistribution": { "type": "linear" },
+                "showPoints": "auto",
+                "spanNulls": false,
+                "stacking": { "group": "A", "mode": "none" },
+                "thresholdsStyle": { "mode": "off" }
+              },
+              "decimals": 0,
+              "mappings": [],
+              "min": 0,
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  { "color": "green", "value": null },
+                  { "color": "red", "value": 80 }
+                ]
+              },
+              "unit": "short"
+            },
+            "overrides": []
+          },
+          "gridPos": { "h": 5, "w": 8, "x": 8, "y": 27 },
+          "id": 18,
+          "options": {
+            "legend": { "calcs": [], "displayMode": "list", "placement": "bottom", "showLegend": true },
+            "tooltip": { "mode": "single", "sort": "none" }
+          },
+          "targets": [
+            {
+              "datasource": { "type": "influxdb", "uid": "influxdb-telegraf" },
+              "alias": "$tag_host",
+              "groupBy": [
+                { "params": ["$__interval"], "type": "time" },
+                { "params": ["host"], "type": "tag" },
+                { "params": ["none"], "type": "fill" }
+              ],
+              "measurement": "sbc_invites",
+              "orderByTime": "ASC",
+              "policy": "default",
+              "refId": "A",
+              "resultFormat": "time_series",
+              "select": [[
+                { "params": ["value"], "type": "field" },
+                { "params": [], "type": "count" }
+              ]],
               "tags": []
             }
           ],
-          "thresholds": [],
-          "timeRegions": [],
-          "title": "Freeswitch Channels",
-          "tooltip": {
-            "shared": true,
-            "sort": 0,
-            "value_type": "individual"
-          },
-          "type": "graph",
-          "xaxis": {
-            "mode": "time",
-            "show": true,
-            "values": []
-          },
-          "yaxes": [
-            {
-              "$$hashKey": "object:1022",
-              "format": "short",
-              "logBase": 1,
-              "show": true
-            },
-            {
-              "$$hashKey": "object:1023",
-              "format": "short",
-              "logBase": 1,
-              "show": true
-            }
-          ],
-          "yaxis": {
-            "align": false
-          }
+          "title": "SBC Invites",
+          "type": "timeseries"
         }
       ],
       "refresh": "5s",
-      "schemaVersion": 34,
-      "style": "dark",
+      "schemaVersion": 39,
       "tags": [],
-      "templating": {
-        "list": []
-      },
-      "time": {
-        "from": "now-5m",
-        "to": "now"
-      },
+      "templating": { "list": [] },
+      "time": { "from": "now-15m", "to": "now" },
       "timepicker": {},
       "timezone": "",
       "title": "Jambonz Metrics",
-      "uid": "OI12Kpc7k",
-      "version": 2,
-      "weekStart": ""
+      "uid": "jambonz-metrics",
+      "version": 1
     }
+{{- if .Values.global.monitoring.nodeMetrics.enabled }}
+  k8s-nodes.json: |
+    {
+      "annotations": {
+        "list": [
+          {
+            "builtIn": 1,
+            "datasource": { "type": "grafana", "uid": "-- Grafana --" },
+            "enable": true,
+            "hide": true,
+            "iconColor": "rgba(0, 211, 255, 1)",
+            "name": "Annotations & Alerts",
+            "type": "dashboard"
+          }
+        ]
+      },
+      "editable": true,
+      "fiscalYearStartMonth": 0,
+      "graphTooltip": 1,
+      "panels": [
+        {
+          "datasource": { "type": "influxdb", "uid": "influxdb-telegraf" },
+          "fieldConfig": {
+            "defaults": {
+              "color": { "mode": "palette-classic" },
+              "custom": {
+                "axisBorderShow": false,
+                "axisCenteredZero": false,
+                "axisLabel": "",
+                "axisPlacement": "auto",
+                "barAlignment": 0,
+                "drawStyle": "line",
+                "fillOpacity": 20,
+                "gradientMode": "none",
+                "lineInterpolation": "smooth",
+                "lineWidth": 2,
+                "pointSize": 5,
+                "showPoints": "never",
+                "spanNulls": false,
+                "stacking": { "group": "A", "mode": "none" }
+              },
+              "unit": "percent",
+              "max": 100,
+              "min": 0
+            },
+            "overrides": []
+          },
+          "gridPos": { "h": 8, "w": 12, "x": 0, "y": 0 },
+          "id": 1,
+          "title": "CPU Usage %",
+          "type": "timeseries",
+          "targets": [
+            {
+              "alias": "$tag_host",
+              "query": "SELECT 100 - mean(\"usage_idle\") AS \"cpu_usage\" FROM \"autogen\".\"cpu\" WHERE \"role\" = 'k8s-node' AND \"cpu\" = 'cpu-total' AND \"host\" =~ /^$host$/ AND $timeFilter GROUP BY time($__interval), \"host\" fill(null)",
+              "rawQuery": true,
+              "refId": "A",
+              "resultFormat": "time_series"
+            }
+          ]
+        },
+        {
+          "datasource": { "type": "influxdb", "uid": "influxdb-telegraf" },
+          "fieldConfig": {
+            "defaults": {
+              "color": { "mode": "palette-classic" },
+              "custom": {
+                "axisBorderShow": false,
+                "axisCenteredZero": false,
+                "axisLabel": "",
+                "axisPlacement": "auto",
+                "barAlignment": 0,
+                "drawStyle": "line",
+                "fillOpacity": 10,
+                "gradientMode": "none",
+                "lineInterpolation": "smooth",
+                "lineWidth": 2,
+                "pointSize": 5,
+                "showPoints": "never",
+                "spanNulls": false,
+                "stacking": { "group": "A", "mode": "none" }
+              },
+              "min": 0
+            },
+            "overrides": []
+          },
+          "gridPos": { "h": 8, "w": 12, "x": 12, "y": 0 },
+          "id": 2,
+          "title": "System Load",
+          "type": "timeseries",
+          "targets": [
+            {
+              "alias": "$tag_host load1",
+              "groupBy": [
+                { "params": ["$__interval"], "type": "time" },
+                { "params": ["host"], "type": "tag" },
+                { "params": ["null"], "type": "fill" }
+              ],
+              "measurement": "system",
+              "policy": "autogen",
+              "refId": "A",
+              "resultFormat": "time_series",
+              "select": [
+                [
+                  { "params": ["load1"], "type": "field" },
+                  { "params": [], "type": "mean" }
+                ]
+              ],
+              "tags": [
+                { "key": "role", "operator": "=", "value": "k8s-node" },
+                { "condition": "AND", "key": "host", "operator": "=~", "value": "/^$host$/" }
+              ]
+            },
+            {
+              "alias": "$tag_host load5",
+              "groupBy": [
+                { "params": ["$__interval"], "type": "time" },
+                { "params": ["host"], "type": "tag" },
+                { "params": ["null"], "type": "fill" }
+              ],
+              "measurement": "system",
+              "policy": "autogen",
+              "refId": "B",
+              "resultFormat": "time_series",
+              "select": [
+                [
+                  { "params": ["load5"], "type": "field" },
+                  { "params": [], "type": "mean" }
+                ]
+              ],
+              "tags": [
+                { "key": "role", "operator": "=", "value": "k8s-node" },
+                { "condition": "AND", "key": "host", "operator": "=~", "value": "/^$host$/" }
+              ]
+            },
+            {
+              "alias": "$tag_host load15",
+              "groupBy": [
+                { "params": ["$__interval"], "type": "time" },
+                { "params": ["host"], "type": "tag" },
+                { "params": ["null"], "type": "fill" }
+              ],
+              "measurement": "system",
+              "policy": "autogen",
+              "refId": "C",
+              "resultFormat": "time_series",
+              "select": [
+                [
+                  { "params": ["load15"], "type": "field" },
+                  { "params": [], "type": "mean" }
+                ]
+              ],
+              "tags": [
+                { "key": "role", "operator": "=", "value": "k8s-node" },
+                { "condition": "AND", "key": "host", "operator": "=~", "value": "/^$host$/" }
+              ]
+            }
+          ]
+        },
+        {
+          "datasource": { "type": "influxdb", "uid": "influxdb-telegraf" },
+          "fieldConfig": {
+            "defaults": {
+              "color": { "mode": "palette-classic" },
+              "custom": {
+                "axisBorderShow": false,
+                "axisCenteredZero": false,
+                "axisLabel": "",
+                "axisPlacement": "auto",
+                "barAlignment": 0,
+                "drawStyle": "line",
+                "fillOpacity": 20,
+                "gradientMode": "none",
+                "lineInterpolation": "smooth",
+                "lineWidth": 2,
+                "pointSize": 5,
+                "showPoints": "never",
+                "spanNulls": false,
+                "stacking": { "group": "A", "mode": "none" }
+              },
+              "unit": "percent",
+              "max": 100,
+              "min": 0
+            },
+            "overrides": []
+          },
+          "gridPos": { "h": 8, "w": 12, "x": 0, "y": 8 },
+          "id": 3,
+          "title": "Memory Usage %",
+          "type": "timeseries",
+          "targets": [
+            {
+              "alias": "$tag_host",
+              "groupBy": [
+                { "params": ["$__interval"], "type": "time" },
+                { "params": ["host"], "type": "tag" },
+                { "params": ["null"], "type": "fill" }
+              ],
+              "measurement": "mem",
+              "policy": "autogen",
+              "refId": "A",
+              "resultFormat": "time_series",
+              "select": [
+                [
+                  { "params": ["used_percent"], "type": "field" },
+                  { "params": [], "type": "mean" }
+                ]
+              ],
+              "tags": [
+                { "key": "role", "operator": "=", "value": "k8s-node" },
+                { "condition": "AND", "key": "host", "operator": "=~", "value": "/^$host$/" }
+              ]
+            }
+          ]
+        },
+        {
+          "datasource": { "type": "influxdb", "uid": "influxdb-telegraf" },
+          "fieldConfig": {
+            "defaults": {
+              "color": { "mode": "palette-classic" },
+              "custom": {
+                "axisBorderShow": false,
+                "axisCenteredZero": false,
+                "axisLabel": "",
+                "axisPlacement": "auto",
+                "barAlignment": 0,
+                "drawStyle": "line",
+                "fillOpacity": 10,
+                "gradientMode": "none",
+                "lineInterpolation": "smooth",
+                "lineWidth": 2,
+                "pointSize": 5,
+                "showPoints": "never",
+                "spanNulls": false,
+                "stacking": { "group": "A", "mode": "none" }
+              },
+              "unit": "bytes",
+              "min": 0
+            },
+            "overrides": []
+          },
+          "gridPos": { "h": 8, "w": 12, "x": 12, "y": 8 },
+          "id": 4,
+          "title": "Available Memory",
+          "type": "timeseries",
+          "targets": [
+            {
+              "alias": "$tag_host",
+              "groupBy": [
+                { "params": ["$__interval"], "type": "time" },
+                { "params": ["host"], "type": "tag" },
+                { "params": ["null"], "type": "fill" }
+              ],
+              "measurement": "mem",
+              "policy": "autogen",
+              "refId": "A",
+              "resultFormat": "time_series",
+              "select": [
+                [
+                  { "params": ["available"], "type": "field" },
+                  { "params": [], "type": "mean" }
+                ]
+              ],
+              "tags": [
+                { "key": "role", "operator": "=", "value": "k8s-node" },
+                { "condition": "AND", "key": "host", "operator": "=~", "value": "/^$host$/" }
+              ]
+            }
+          ]
+        },
+        {
+          "datasource": { "type": "influxdb", "uid": "influxdb-telegraf" },
+          "fieldConfig": {
+            "defaults": {
+              "color": { "mode": "palette-classic" },
+              "custom": {
+                "axisBorderShow": false,
+                "axisCenteredZero": false,
+                "axisLabel": "",
+                "axisPlacement": "auto",
+                "barAlignment": 0,
+                "drawStyle": "line",
+                "fillOpacity": 20,
+                "gradientMode": "none",
+                "lineInterpolation": "smooth",
+                "lineWidth": 2,
+                "pointSize": 5,
+                "showPoints": "never",
+                "spanNulls": false,
+                "stacking": { "group": "A", "mode": "none" }
+              },
+              "unit": "percent",
+              "max": 100,
+              "min": 0
+            },
+            "overrides": []
+          },
+          "gridPos": { "h": 8, "w": 12, "x": 0, "y": 16 },
+          "id": 5,
+          "title": "Disk Usage %",
+          "type": "timeseries",
+          "targets": [
+            {
+              "alias": "$tag_host $tag_path",
+              "groupBy": [
+                { "params": ["$__interval"], "type": "time" },
+                { "params": ["host"], "type": "tag" },
+                { "params": ["path"], "type": "tag" },
+                { "params": ["null"], "type": "fill" }
+              ],
+              "measurement": "disk",
+              "policy": "autogen",
+              "refId": "A",
+              "resultFormat": "time_series",
+              "select": [
+                [
+                  { "params": ["used_percent"], "type": "field" },
+                  { "params": [], "type": "mean" }
+                ]
+              ],
+              "tags": [
+                { "key": "role", "operator": "=", "value": "k8s-node" },
+                { "condition": "AND", "key": "host", "operator": "=~", "value": "/^$host$/" }
+              ]
+            }
+          ]
+        },
+        {
+          "datasource": { "type": "influxdb", "uid": "influxdb-telegraf" },
+          "fieldConfig": {
+            "defaults": {
+              "color": { "mode": "palette-classic" },
+              "custom": {
+                "axisBorderShow": false,
+                "axisCenteredZero": false,
+                "axisLabel": "",
+                "axisPlacement": "auto",
+                "barAlignment": 0,
+                "drawStyle": "line",
+                "fillOpacity": 20,
+                "gradientMode": "none",
+                "lineInterpolation": "smooth",
+                "lineWidth": 2,
+                "pointSize": 5,
+                "showPoints": "never",
+                "spanNulls": false,
+                "stacking": { "group": "A", "mode": "none" }
+              },
+              "unit": "percent",
+              "max": 100,
+              "min": 0
+            },
+            "overrides": []
+          },
+          "gridPos": { "h": 8, "w": 12, "x": 12, "y": 16 },
+          "id": 6,
+          "title": "Swap Usage %",
+          "type": "timeseries",
+          "targets": [
+            {
+              "alias": "$tag_host",
+              "groupBy": [
+                { "params": ["$__interval"], "type": "time" },
+                { "params": ["host"], "type": "tag" },
+                { "params": ["null"], "type": "fill" }
+              ],
+              "measurement": "swap",
+              "policy": "autogen",
+              "refId": "A",
+              "resultFormat": "time_series",
+              "select": [
+                [
+                  { "params": ["used_percent"], "type": "field" },
+                  { "params": [], "type": "mean" }
+                ]
+              ],
+              "tags": [
+                { "key": "role", "operator": "=", "value": "k8s-node" },
+                { "condition": "AND", "key": "host", "operator": "=~", "value": "/^$host$/" }
+              ]
+            }
+          ]
+        }
+      ],
+      "schemaVersion": 39,
+      "tags": ["kubernetes", "nodes"],
+      "templating": {
+        "list": [
+          {
+            "current": { "selected": true, "text": "All", "value": "$__all" },
+            "datasource": { "type": "influxdb", "uid": "influxdb-telegraf" },
+            "definition": "SHOW TAG VALUES FROM \"system\" WITH KEY = \"host\" WHERE \"role\" = 'k8s-node'",
+            "includeAll": true,
+            "multi": true,
+            "name": "host",
+            "label": "Node",
+            "query": "SHOW TAG VALUES FROM \"system\" WITH KEY = \"host\" WHERE \"role\" = 'k8s-node'",
+            "refresh": 2,
+            "sort": 1,
+            "type": "query"
+          }
+        ]
+      },
+      "time": { "from": "now-15m", "to": "now" },
+      "timepicker": { "refresh_intervals": ["5s", "10s", "30s", "1m", "5m"] },
+      "timezone": "",
+      "title": "Kubernetes Nodes",
+      "uid": "k8s-nodes",
+      "version": 1
+    }
+{{- end }}
+{{- if .Values.global.logging.enabled }}
+  logs-feature-server.json: |
+    {
+      "annotations": { "list": [] },
+      "editable": true,
+      "fiscalYearStartMonth": 0,
+      "graphTooltip": 0,
+      "id": null,
+      "links": [],
+      "panels": [
+        {
+          "datasource": { "type": "loki", "uid": "loki" },
+          "fieldConfig": { "defaults": {}, "overrides": [] },
+          "gridPos": { "h": 24, "w": 24, "x": 0, "y": 0 },
+          "id": 1,
+          "options": {
+            "dedupStrategy": "none",
+            "enableLogDetails": true,
+            "prettifyLogMessage": false,
+            "showCommonLabels": false,
+            "showLabels": false,
+            "showTime": true,
+            "sortOrder": "Ascending",
+            "wrapLogMessage": false
+          },
+          "targets": [
+            {
+              "datasource": { "type": "loki", "uid": "loki" },
+              "editorMode": "code",
+              "expr": "{app=\"feature-server\", container=\"feature-server\", pod=~\"$pod\"} |~ \"$callId\" |~ \"$callSid\" |~ \"$accountSid\"",
+              "queryType": "range",
+              "refId": "A"
+            }
+          ],
+          "title": "feature-server",
+          "type": "logs"
+        }
+      ],
+      "schemaVersion": 39,
+      "tags": ["loki", "logs"],
+      "templating": {
+        "list": [
+          {
+            "current": { "selected": true, "text": "All", "value": "$__all" },
+            "datasource": { "type": "loki", "uid": "loki" },
+            "definition": "label_values({app=\"feature-server\"}, pod)",
+            "includeAll": true,
+            "allValue": ".*",
+            "name": "pod",
+            "label": "Pod",
+            "query": "label_values({app=\"feature-server\"}, pod)",
+            "refresh": 2,
+            "sort": 1,
+            "type": "query"
+          },
+          {
+            "current": { "selected": false, "text": "", "value": "" },
+            "name": "callId",
+            "label": "Call ID",
+            "type": "textbox",
+            "query": ".*"
+          },
+          {
+            "current": { "selected": false, "text": "", "value": "" },
+            "name": "callSid",
+            "label": "Call SID",
+            "type": "textbox",
+            "query": ".*"
+          },
+          {
+            "current": { "selected": false, "text": "", "value": "" },
+            "name": "accountSid",
+            "label": "Account SID",
+            "type": "textbox",
+            "query": ".*"
+          }
+        ]
+      },
+      "time": { "from": "now-1h", "to": "now" },
+      "timepicker": {},
+      "timezone": "",
+      "title": "feature-server",
+      "uid": "jambonz-logs-fs",
+      "version": 3
+    }
+  logs-sbc-sip.json: |
+    {
+      "annotations": { "list": [] },
+      "editable": true,
+      "fiscalYearStartMonth": 0,
+      "graphTooltip": 0,
+      "id": null,
+      "links": [],
+      "panels": [
+        {
+          "datasource": { "type": "loki", "uid": "loki" },
+          "fieldConfig": { "defaults": {}, "overrides": [] },
+          "gridPos": { "h": 24, "w": 24, "x": 0, "y": 0 },
+          "id": 1,
+          "options": {
+            "dedupStrategy": "none",
+            "enableLogDetails": true,
+            "prettifyLogMessage": false,
+            "showCommonLabels": false,
+            "showLabels": false,
+            "showTime": true,
+            "sortOrder": "Ascending",
+            "wrapLogMessage": false
+          },
+          "targets": [
+            {
+              "datasource": { "type": "loki", "uid": "loki" },
+              "editorMode": "code",
+              "expr": "{app=\"jambonz-sbc-sip\", container=\"drachtio\", pod=~\"$pod\"} |~ \"$callId\"",
+              "queryType": "range",
+              "refId": "A"
+            }
+          ],
+          "title": "sbc-sip (drachtio)",
+          "type": "logs"
+        }
+      ],
+      "schemaVersion": 39,
+      "tags": ["loki", "logs"],
+      "templating": {
+        "list": [
+          {
+            "current": { "selected": true, "text": "All", "value": "$__all" },
+            "datasource": { "type": "loki", "uid": "loki" },
+            "definition": "label_values({app=\"jambonz-sbc-sip\"}, pod)",
+            "includeAll": true,
+            "allValue": ".*",
+            "name": "pod",
+            "label": "Pod",
+            "query": "label_values({app=\"jambonz-sbc-sip\"}, pod)",
+            "refresh": 2,
+            "sort": 1,
+            "type": "query"
+          },
+          {
+            "current": { "selected": false, "text": "", "value": "" },
+            "name": "callId",
+            "label": "Call ID",
+            "type": "textbox",
+            "query": ".*"
+          }
+        ]
+      },
+      "time": { "from": "now-1h", "to": "now" },
+      "timepicker": {},
+      "timezone": "",
+      "title": "sbc-sip (drachtio)",
+      "uid": "jambonz-logs-sip",
+      "version": 2
+    }
+  logs-sbc-inbound.json: |
+    {
+      "annotations": { "list": [] },
+      "editable": true,
+      "fiscalYearStartMonth": 0,
+      "graphTooltip": 0,
+      "id": null,
+      "links": [],
+      "panels": [
+        {
+          "datasource": { "type": "loki", "uid": "loki" },
+          "fieldConfig": { "defaults": {}, "overrides": [] },
+          "gridPos": { "h": 24, "w": 24, "x": 0, "y": 0 },
+          "id": 1,
+          "options": {
+            "dedupStrategy": "none",
+            "enableLogDetails": true,
+            "prettifyLogMessage": false,
+            "showCommonLabels": false,
+            "showLabels": false,
+            "showTime": true,
+            "sortOrder": "Ascending",
+            "wrapLogMessage": false
+          },
+          "targets": [
+            {
+              "datasource": { "type": "loki", "uid": "loki" },
+              "editorMode": "code",
+              "expr": "{app=\"sbc-inbound\", pod=~\"$pod\"} |~ \"$callId\" |~ \"$accountSid\"",
+              "queryType": "range",
+              "refId": "A"
+            }
+          ],
+          "title": "sbc-inbound",
+          "type": "logs"
+        }
+      ],
+      "schemaVersion": 39,
+      "tags": ["loki", "logs"],
+      "templating": {
+        "list": [
+          {
+            "current": { "selected": true, "text": "All", "value": "$__all" },
+            "datasource": { "type": "loki", "uid": "loki" },
+            "definition": "label_values({app=\"sbc-inbound\"}, pod)",
+            "includeAll": true,
+            "allValue": ".*",
+            "name": "pod",
+            "label": "Pod",
+            "query": "label_values({app=\"sbc-inbound\"}, pod)",
+            "refresh": 2,
+            "sort": 1,
+            "type": "query"
+          },
+          {
+            "current": { "selected": false, "text": "", "value": "" },
+            "name": "callId",
+            "label": "Call ID",
+            "type": "textbox",
+            "query": ".*"
+          },
+          {
+            "current": { "selected": false, "text": "", "value": "" },
+            "name": "accountSid",
+            "label": "Account SID",
+            "type": "textbox",
+            "query": ".*"
+          }
+        ]
+      },
+      "time": { "from": "now-1h", "to": "now" },
+      "timepicker": {},
+      "timezone": "",
+      "title": "sbc-inbound",
+      "uid": "jambonz-logs-in",
+      "version": 2
+    }
+  logs-sbc-outbound.json: |
+    {
+      "annotations": { "list": [] },
+      "editable": true,
+      "fiscalYearStartMonth": 0,
+      "graphTooltip": 0,
+      "id": null,
+      "links": [],
+      "panels": [
+        {
+          "datasource": { "type": "loki", "uid": "loki" },
+          "fieldConfig": { "defaults": {}, "overrides": [] },
+          "gridPos": { "h": 24, "w": 24, "x": 0, "y": 0 },
+          "id": 1,
+          "options": {
+            "dedupStrategy": "none",
+            "enableLogDetails": true,
+            "prettifyLogMessage": false,
+            "showCommonLabels": false,
+            "showLabels": false,
+            "showTime": true,
+            "sortOrder": "Ascending",
+            "wrapLogMessage": false
+          },
+          "targets": [
+            {
+              "datasource": { "type": "loki", "uid": "loki" },
+              "editorMode": "code",
+              "expr": "{app=\"sbc-outbound\", pod=~\"$pod\"} |~ \"$callId\" |~ \"$accountSid\"",
+              "queryType": "range",
+              "refId": "A"
+            }
+          ],
+          "title": "sbc-outbound",
+          "type": "logs"
+        }
+      ],
+      "schemaVersion": 39,
+      "tags": ["loki", "logs"],
+      "templating": {
+        "list": [
+          {
+            "current": { "selected": true, "text": "All", "value": "$__all" },
+            "datasource": { "type": "loki", "uid": "loki" },
+            "definition": "label_values({app=\"sbc-outbound\"}, pod)",
+            "includeAll": true,
+            "allValue": ".*",
+            "name": "pod",
+            "label": "Pod",
+            "query": "label_values({app=\"sbc-outbound\"}, pod)",
+            "refresh": 2,
+            "sort": 1,
+            "type": "query"
+          },
+          {
+            "current": { "selected": false, "text": "", "value": "" },
+            "name": "callId",
+            "label": "Call ID",
+            "type": "textbox",
+            "query": ".*"
+          },
+          {
+            "current": { "selected": false, "text": "", "value": "" },
+            "name": "accountSid",
+            "label": "Account SID",
+            "type": "textbox",
+            "query": ".*"
+          }
+        ]
+      },
+      "time": { "from": "now-1h", "to": "now" },
+      "timepicker": {},
+      "timezone": "",
+      "title": "sbc-outbound",
+      "uid": "jambonz-logs-out",
+      "version": 2
+    }
+  logs-api-server.json: |
+    {
+      "annotations": { "list": [] },
+      "editable": true,
+      "fiscalYearStartMonth": 0,
+      "graphTooltip": 0,
+      "id": null,
+      "links": [],
+      "panels": [
+        {
+          "datasource": { "type": "loki", "uid": "loki" },
+          "fieldConfig": { "defaults": {}, "overrides": [] },
+          "gridPos": { "h": 24, "w": 24, "x": 0, "y": 0 },
+          "id": 1,
+          "options": {
+            "dedupStrategy": "none",
+            "enableLogDetails": true,
+            "prettifyLogMessage": false,
+            "showCommonLabels": false,
+            "showLabels": false,
+            "showTime": true,
+            "sortOrder": "Ascending",
+            "wrapLogMessage": false
+          },
+          "targets": [
+            {
+              "datasource": { "type": "loki", "uid": "loki" },
+              "editorMode": "code",
+              "expr": "{app=\"api-server\", pod=~\"$pod\"}",
+              "queryType": "range",
+              "refId": "A"
+            }
+          ],
+          "title": "api-server",
+          "type": "logs"
+        }
+      ],
+      "schemaVersion": 39,
+      "tags": ["loki", "logs"],
+      "templating": {
+        "list": [
+          {
+            "current": { "selected": true, "text": "All", "value": "$__all" },
+            "datasource": { "type": "loki", "uid": "loki" },
+            "definition": "label_values({app=\"api-server\"}, pod)",
+            "includeAll": true,
+            "allValue": ".*",
+            "name": "pod",
+            "label": "Pod",
+            "query": "label_values({app=\"api-server\"}, pod)",
+            "refresh": 2,
+            "sort": 1,
+            "type": "query"
+          }
+        ]
+      },
+      "time": { "from": "now-1h", "to": "now" },
+      "timepicker": {},
+      "timezone": "",
+      "title": "api-server",
+      "uid": "jambonz-logs-api",
+      "version": 1
+    }
+{{- end }}

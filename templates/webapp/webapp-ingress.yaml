@@ -15,7 +15,7 @@ metadata:
 spec:
   ingressClassName: traefik
   rules:
-    - host: {{ required "hostname for the web port" .Values.webapp.hostname }}
+    - host: {{ include "jambonz.webappHostname" . }}
       http:
         paths:
         - backend:
@@ -28,6 +28,6 @@ spec:
 {{- if .Values.global.traefik.tls.enabled }}
   tls:
   - hosts:
-    - {{ required "hostname for the web port" .Values.webapp.hostname }}
+    - {{ include "jambonz.webappHostname" . }}
     secretName: jambonz-webapp-tls
 {{- end }}

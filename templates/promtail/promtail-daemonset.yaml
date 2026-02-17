@@ -1,0 +1,73 @@
+{{- if .Values.global.logging.enabled }}
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: promtail
+  namespace: {{ .Release.Namespace | quote }}
+  labels:
+    app: promtail
+{{ include "common.labels" . | indent 4 }}
+spec:
+  selector:
+    matchLabels:
+      app: promtail
+  template:
+    metadata:
+      labels:
+        app: promtail
+      annotations:
+        {{- if .Values.global.podAnnotations }}
+        {{ toYaml .Values.global.podAnnotations | default "" | nindent 8 }}
+        {{- end }}
+        {{- if .Values.promtail.podAnnotations }}
+        {{ toYaml .Values.promtail.podAnnotations | default "" | nindent 8 }}
+        {{- end }}
+    spec:
+      serviceAccountName: promtail
+      tolerations:
+        - key: {{ .Values.sbc.sip.toleration | quote }}
+          operator: "Exists"
+          effect: "NoSchedule"
+        - key: {{ .Values.sbc.rtp.toleration | quote }}
+          operator: "Exists"
+          effect: "NoSchedule"
+      containers:
+        - name: promtail
+          image: {{ .Values.promtail.image }}
+          args:
+            - -config.file=/etc/promtail/promtail.yaml
+          env:
+            - name: HOSTNAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: spec.nodeName
+          volumeMounts:
+            - name: promtail-config
+              mountPath: /etc/promtail/promtail.yaml
+              subPath: promtail.yaml
+            - name: pods-log
+              mountPath: /var/log/pods
+              readOnly: true
+            - name: containers-log
+              mountPath: /var/log/containers
+              readOnly: true
+            - name: promtail-positions
+              mountPath: /run/promtail
+          resources: {}
+      restartPolicy: Always
+      volumes:
+        - name: promtail-config
+          configMap:
+            name: promtail-config
+            items:
+              - key: promtail.yaml
+                path: promtail.yaml
+        - name: pods-log
+          hostPath:
+            path: /var/log/pods
+        - name: containers-log
+          hostPath:
+            path: /var/log/containers
+        - name: promtail-positions
+          emptyDir: {}
+{{- end }}

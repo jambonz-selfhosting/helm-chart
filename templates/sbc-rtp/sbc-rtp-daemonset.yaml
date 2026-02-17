@@ -119,7 +119,7 @@ spec:
           args: 
             - rtpengine
             - --listen-udp=22222
-            - --listen-http=22222
+            - --listen-http=8081
             - --homer
             - heplify-server.{{ .Release.Namespace }}:9060
             - --homer-protocol
@@ -128,7 +128,7 @@ spec:
             - {{ .Values.rtpengine.homerId | quote }}
             - --log-level
             - {{ default 5 .Values.rtpengine.loglevel | quote }}
-            {{- if .Values.global.recordings.enabled }}
+            {{- if .Values.rtpengine.recordings.enabled }}
             - --recording-method
             - {{ .Values.rtpengine.recordings.method }}
             - --recording-dir
@@ -146,7 +146,7 @@ spec:
                 secretKeyRef:
                   name: jambonz-secrets
                   key: DRACHTIO_SECRET
-          {{- if .Values.global.recordings.enabled }}
+          {{- if .Values.rtpengine.recordings.enabled }}
           volumeMounts:
             - mountPath: {{ .Values.rtpengine.recordings.dir | quote }}
               name: recordings
@@ -157,7 +157,7 @@ spec:
 {{- if .Values.sbc.rtp.extraContainers }}
 {{ toYaml .Values.sbc.rtp.extraContainers | default "" | nindent 8 }}
 {{- end }}
-      {{- if .Values.global.recordings.enabled }}
+      {{- if .Values.rtpengine.recordings.enabled }}
       volumes:
       - name: recordings
         persistentVolumeClaim:

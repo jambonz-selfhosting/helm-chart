@@ -20,3 +20,5 @@ charts/
 *.bak
 *.tmp
 *~
+
+CLAUDE.md

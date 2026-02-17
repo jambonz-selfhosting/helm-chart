@@ -1,0 +1,84 @@
+{{- if .Values.global.monitoring.nodeMetrics.enabled }}
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: telegraf-node
+  labels:
+    app: telegraf-node
+{{ include "common.labels" . | indent 4 }}
+  namespace: {{ .Release.Namespace | quote }}
+spec:
+  selector:
+    matchLabels:
+      app: telegraf-node
+  template:
+    metadata:
+      labels:
+        app: telegraf-node
+      annotations:
+        {{- if .Values.global.podAnnotations }}
+        {{ toYaml .Values.global.podAnnotations | default "" | nindent 8 }}
+        {{- end }}
+        {{- if .Values.telegraf.podAnnotations }}
+        {{ toYaml .Values.telegraf.podAnnotations | default "" | nindent 8 }}
+        {{- end }}
+    spec:
+      tolerations:
+        - key: {{ .Values.sbc.sip.toleration }}
+          operator: Exists
+          effect: NoSchedule
+        - key: {{ .Values.sbc.rtp.toleration }}
+          operator: Exists
+          effect: NoSchedule
+      containers:
+        - image: {{ .Values.telegraf.image }}
+          name: telegraf
+          env:
+            - name: HOSTNAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: spec.nodeName
+            - name: HOST_PROC
+              value: /host/proc
+            - name: HOST_SYS
+              value: /host/sys
+            - name: HOST_MOUNT_PREFIX
+              value: /host/rootfs
+          resources:
+            requests:
+              cpu: 50m
+              memory: 64Mi
+            limits:
+              cpu: 200m
+              memory: 128Mi
+          volumeMounts:
+            - mountPath: /etc/telegraf/telegraf.conf
+              name: telegraf-node-conf
+              subPath: telegraf.conf
+            - mountPath: /host/proc
+              name: proc
+              readOnly: true
+            - mountPath: /host/sys
+              name: sys
+              readOnly: true
+            - mountPath: /host/rootfs
+              name: rootfs
+              readOnly: true
+      restartPolicy: Always
+      volumes:
+        - name: telegraf-node-conf
+          configMap:
+            name: telegraf-node-conf
+            items:
+              - key: telegraf.conf
+                path: telegraf.conf
+        - name: proc
+          hostPath:
+            path: /proc
+        - name: sys
+          hostPath:
+            path: /sys
+        - name: rootfs
+          hostPath:
+            path: /
+{{- end }}

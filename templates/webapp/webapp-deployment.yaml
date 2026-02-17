@@ -36,11 +36,7 @@ spec:
             - name: NODE_ENV
               value: production
             - name: API_BASE_URL
-              value: {{ if .Values.global.traefik.tls.enabled }}https{{ else }}http{{ end }}://{{ .Values.api.hostname }}/v1
-            {{- if .Values.webapp.disableRecording }}
-            - name: DISABLE_CALL_RECORDING
-              value: "true"
-            {{- end }}
+              value: {{ if .Values.global.traefik.tls.enabled }}https{{ else }}http{{ end }}://{{ include "jambonz.apiHostname" . }}/v1
             - name: GF_SERVER_ROOT_URL
               value: "/grafana"
             - name: NODE_OPTIONS

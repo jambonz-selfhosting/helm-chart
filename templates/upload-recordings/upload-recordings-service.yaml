@@ -1,0 +1,17 @@
+{{- if .Values.uploadRecordings.enabled }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: upload-recordings
+  labels:
+    app: upload-recordings
+{{ include "common.labels" . | indent 4 }}
+  namespace: {{ .Release.Namespace | quote }}
+spec:
+  ports:
+    - name: http
+      port: {{ .Values.uploadRecordings.httpPort }}
+      targetPort: {{ .Values.uploadRecordings.httpPort }}
+  selector:
+    app: upload-recordings
+{{- end }}

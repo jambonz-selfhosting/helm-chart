@@ -79,7 +79,7 @@ spec:
                   "-c",
                   "while $(curl --output /dev/null --silent --head --fail-early http://127.0.0.1:3000); do printf '.'; sleep 10; done"
                 ]
-          args: ['drachtio', '--contact', 'sip:*:5060;transport=udp', '--mtu', '4096', '--loglevel', 'info', '--sofia-loglevel', '3']
+          args: ['drachtio', '--contact', 'sip:*:5060;transport=udp', '--mtu', '4096', '--loglevel', 'info', '--sofia-loglevel', '3', '--feature-server-mode']
           ports:
             - containerPort: 9022
         - name: freeswitch
@@ -89,7 +89,20 @@ spec:
           {{- range .Values.freeswitch.args }}
             - {{ . | quote }}
           {{- end }}
-          env: 
+          env:
+            - name: JAMBONES_REDIS_HOST
+              value: redis.{{ .Release.Namespace }}
+            - name: JAMBONES_MYSQL_HOST
+              value: mysql.{{ .Release.Namespace }}
+            - name: JAMBONES_MYSQL_USER
+              value: {{ .Values.mysql.user }}
+            - name: JAMBONES_MYSQL_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: jambonz-secrets
+                  key: MYSQL_PASSWORD
+            - name: JAMBONES_MYSQL_DATABASE
+              value: {{ .Values.mysql.database }}
             - name: MOD_AUDIO_FORK_SUBPROTOCOL_NAME
               value: audio.jambonz.org
             - name: MOD_AUDIO_FORK_SERVICE_THREADS
@@ -146,7 +159,7 @@ spec:
             - name: K8S_SBC_SIP_SERVICE_NAME 
               value: sbc-sip
             - name: JAMBONES_API_BASE_URL
-              value: http://{{ .Values.api.hostname }}/v1
+              value: http://{{ include "jambonz.apiHostname" . }}/v1
             - name: JAMBONES_TIME_SERIES_HOST 
               value: influxdb.{{ .Release.Namespace  }}
             - name: DRACHTIO_HOST
@@ -177,19 +190,19 @@ spec:
             - name: STATS_SAMPLE_RATE
               value:  {{ .Values.stats.sampleRate | quote }}
             {{- end }}
-            - name: JAMBONES_OTEL_ENABLED
-              value: "1" 
 {{- if .Values.global.cassandra.enabled }}
+            - name: JAMBONES_OTEL_ENABLED
+              value: "1"
             - name: OTEL_EXPORTER_JAEGER_ENDPOINT
               value: http://jaeger-collector.{{ .Release.Namespace  }}:14268/api/traces
-{{- else }}
-            - name: OTEL_EXPORTER_JAEGER_AGENT_HOST
-              value: jaeger.{{ .Release.Namespace  }}
-{{- end }}
             - name: OTEL_TRACES_SAMPLER
               value: parentbased_traceidratio
             - name: OTEL_TRACES_SAMPLER_ARG
               value: {{ default "1.0" .Values.featureServer.otelSampleRate | quote }}
+{{- else }}
+            - name: JAMBONES_OTEL_ENABLED
+              value: "0"
+{{- end }}
             - name: JAMBONES_REDIS_HOST
               value: redis.{{ .Release.Namespace  }}
             - name: JAMBONES_REDIS_PORT
@@ -215,8 +228,13 @@ spec:
                 secretKeyRef:
                   name: jambonz-secrets
                   key: JWT_SECRET
+            {{- if .Values.uploadRecordings.enabled }}
             - name: JAMBONZ_RECORD_WS_BASE_URL
-              value: ws://{{ .Values.api.hostname }}/api/v1
+              value: ws://upload-recordings.{{ .Release.Namespace }}:{{ .Values.uploadRecordings.httpPort }}
+            {{- else }}
+            - name: JAMBONZ_RECORD_WS_BASE_URL
+              value: ws://{{ include "jambonz.apiHostname" . }}/api/v1
+            {{- end }}
             - name: JAMBONZ_RECORD_WS_USERNAME
               value: jambonz
             - name: JAMBONZ_RECORD_WS_PASSWORD
