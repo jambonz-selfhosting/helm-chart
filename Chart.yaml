@@ -1,7 +1,7 @@
 apiVersion: v2
 name: jambonz
-version: 10.0.0
-appVersion: 10.0.3
+version: 10..2.2
+appVersion: 10.2.2
 description: jambonz CPaaS for communication service providers
 home: https://jambonz.org
 keywords:
