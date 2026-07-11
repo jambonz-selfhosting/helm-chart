@@ -46,7 +46,7 @@ spec:
 {{- end }}
       initContainers:
         - name: db-create-wait
-          image: kanisterio/mysql-sidecar:0.40.0
+          image: mysql:8.0
           command:
             - sh 
             - -c 

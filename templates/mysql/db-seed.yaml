@@ -24,7 +24,7 @@ spec:
       {{- end }}
       initContainers:
         - name: wait-for-schema
-          image: mysql:5.7
+          image: mysql:8.0
           command:
             - '/bin/sh'
             - '-c'
@@ -37,7 +37,7 @@ spec:
                   key: MYSQL_PASSWORD
       containers:
         - name: db-seed
-          image: mysql:5.7
+          image: mysql:8.0
           command:
             - 'sh'
             - '-c'

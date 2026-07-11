@@ -37,7 +37,7 @@ spec:
         - name: mysql 
           image: {{ .Values.mysql.image }}
           args:
-            - "--ignore-db-dir=lost+found"
+            - "--default-authentication-plugin=mysql_native_password"
           env:
             {{- if .Values.mysql.rootSecret }}
             - name: MYSQL_ROOT_PASSWORD

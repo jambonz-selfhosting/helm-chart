@@ -47,7 +47,7 @@ spec:
 {{ toYaml .Values.sbc.rtp.extraVolumes | default "" | nindent 8 }}
 {{- end }}
       initContainers:
-        - image: kanisterio/mysql-sidecar:0.40.0
+        - image: mysql:8.0
           name: db-create-wait
           command:
             - sh 
