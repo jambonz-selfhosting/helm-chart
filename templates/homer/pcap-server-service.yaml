@@ -1,0 +1,18 @@
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    app: pcap-server
+{{ include "common.labels" . | indent 4 }}
+  # Named "homer-webapp" so api-server's HOMER_BASE_URL (http://homer-webapp)
+  # resolves unchanged — pcap-server is a drop-in for homer-app's pcap-export
+  # endpoint. Port 80 -> pcap-server's 9080.
+  name: homer-webapp
+  namespace: {{ .Release.Namespace | quote }}
+spec:
+  ports:
+    - name: homer-webapp
+      port: 80
+      targetPort: 9080
+  selector:
+    app: pcap-server

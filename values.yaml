@@ -290,8 +290,8 @@ grafana:
   storage: 10Gi
   podAnnotations:
             
-heplifyServer: 
-  image: sipcapture/heplify-server:latest
+heplifyServer:
+  image: jambonz/heplify-server:1.0.4
   podAnnotations:
 influxdb: 
   image: influxdb:1.8
@@ -303,8 +303,12 @@ cassandra:
   keyspace: jaeger_v1_dc1
   storage: 30Gi
   podAnnotations:
-homer:
-  image: sipcapture/webapp:latest
+# pcap-server serves SIP pcap export (replaces the homer web-app in v11).
+# Reads captured messages from the same postgres (homer_data db) that
+# heplify-server writes to; api-server reaches it via the homer-webapp service.
+pcapServer:
+  image: jambonz/pcap-server:1.0.4
+  imagePullPolicy: IfNotPresent
   podAnnotations:
 postgres: 
   image: postgres:11-alpine

@@ -1,0 +1,60 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app: pcap-server
+{{ include "common.labels" . | indent 4 }}
+  name: pcap-server
+  namespace: {{ .Release.Namespace | quote }}
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: pcap-server
+  template:
+    metadata:
+      labels:
+        app: pcap-server
+      annotations:
+        {{- if .Values.global.podAnnotations }}
+        {{ toYaml .Values.global.podAnnotations | default "" | nindent 8 }}
+        {{- end }}
+        {{- if .Values.pcapServer.podAnnotations }}
+        {{ toYaml .Values.pcapServer.podAnnotations | default "" | nindent 8 }}
+        {{- end }}
+    spec:
+      {{- if .Values.affinity }}
+      affinity:
+        {{ toYaml .Values.affinity | default "" | nindent 8 }}
+      {{- end }}
+      containers:
+        - name: pcap-server
+          image: {{ .Values.pcapServer.image }}
+          imagePullPolicy: {{ default "IfNotPresent" .Values.pcapServer.imagePullPolicy }}
+          ports:
+            - containerPort: 9080
+          resources: {}
+          env:
+            - name: HOMER_LISTEN_ADDR
+              value: ":9080"
+            # reads the SIP capture data heplify-server writes to postgres
+            - name: HOMER_DB_HOST
+              value: postgres
+            - name: HOMER_DB_PORT
+              value: "5432"
+            - name: HOMER_DB_NAME
+              value: homer_data
+            - name: HOMER_DB_USER
+              value: {{ .Values.postgres.user | b64dec | quote }}
+            - name: HOMER_DB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: jambonz-secrets
+                  key: POSTGRES_PASSWORD
+            - name: HOMER_DB_SSLMODE
+              value: disable
+            # basic-auth accepted from api-server (matches HOMER_USERNAME/PASSWORD)
+            - name: HOMER_AUTH_USERNAME
+              value: admin
+            - name: HOMER_AUTH_PASSWORD
+              value: sipcapture
