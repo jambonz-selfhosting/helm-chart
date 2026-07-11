@@ -47,17 +47,6 @@ spec:
 {{ toYaml .Values.sbc.rtp.extraVolumes | default "" | nindent 8 }}
 {{- end }}
       initContainers:
-        {{- if and (.Values.sbc.ec2EipAllocator.enabled) (eq .Values.cloud "aws") }}
-        - name: ec2-eip-allocator
-          image: {{ .Values.sbc.ec2EipAllocator.image }}
-          securityContext:
-            privileged: true
-          env:
-            - name: AWS_EIP_NODE_GROUP_ROLE_KEY
-              value: {{ .Values.sbc.ec2EipAllocator.rtpEipGroupRoleKey }}
-            - name: AWS_EIP_NODE_GROUP_ROLE
-              value: {{ .Values.sbc.ec2EipAllocator.rtpEipGroupRole }}
-        {{- end }}
         - image: kanisterio/mysql-sidecar:0.40.0
           name: db-create-wait
           command:

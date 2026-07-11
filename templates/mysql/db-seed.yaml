@@ -48,6 +48,12 @@ spec:
                 SELECT '{{ include "jambonz.webappHostname" . }}', 'sip.{{ include "jambonz.webappHostname" . }}', '{{ include "jambonz.grafanaHostname" . }}', 'info'
                 WHERE NOT EXISTS (SELECT 1 FROM system_information LIMIT 1);
               "
+              echo "Setting schema_version to {{ .Chart.AppVersion }}"
+              mysql -h ${MYSQL_HOST} -u ${MYSQL_USER} -p${MYSQL_PASSWORD} ${MYSQL_DATABASE} -e "
+                INSERT INTO schema_version (version)
+                SELECT '{{ .Chart.AppVersion }}'
+                WHERE NOT EXISTS (SELECT 1 FROM schema_version LIMIT 1);
+              "
           env:
             - name: MYSQL_HOST
               value: {{ .Values.mysql.host }}

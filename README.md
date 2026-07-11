@@ -78,8 +78,6 @@ These ship with preset defaults. **Change them before any production deployment.
 | `global.cassandra.enabled` | Use Cassandra backend for Jaeger trace storage | `false` |
 | `global.logging.enabled` | Deploy Loki + Promtail for centralized pod logging | `true` |
 | `sbc.sip.ssl.enabled` | Enable SIPS (TLS) and Secure WebSocket listeners on the SBC | `false` |
-| `rtpengine.recordings.enabled` | Enable call recording to persistent storage | `false` |
-
 ### Scaling
 
 The three components that matter for call capacity are:

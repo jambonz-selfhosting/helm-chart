@@ -35,16 +35,32 @@ spec:
           operator: "Exists"
           effect: "NoSchedule"
       initContainers:
-        {{- if and (.Values.sbc.ec2EipAllocator.enabled) (eq .Values.cloud "aws") }}
-        - name: ec2-eip-allocator
-          image: {{ .Values.sbc.ec2EipAllocator.image }}
+        {{- if .Values.sbc.eipAllocator.enabled }}
+        - name: eip-allocator
+          image: {{ .Values.sbc.eipAllocator.image }}
           securityContext:
             privileged: true
           env:
-            - name: AWS_EIP_NODE_GROUP_ROLE_KEY
-              value: {{ .Values.sbc.ec2EipAllocator.sipEipGroupRoleKey }}
-            - name: AWS_EIP_NODE_GROUP_ROLE
-              value: {{ .Values.sbc.ec2EipAllocator.sipEipGroupRole }}
+            - name: CLOUD
+              value: {{ .Values.cloud }}
+            - name: EIP_GROUP_ROLE_KEY
+              value: {{ .Values.sbc.eipAllocator.sipEipGroupRoleKey }}
+            - name: EIP_GROUP_ROLE
+              value: {{ .Values.sbc.eipAllocator.sipEipGroupRole }}
+            {{- if .Values.sbc.eipAllocator.exoscaleApiKeySecret }}
+            - name: EXOSCALE_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.sbc.eipAllocator.exoscaleApiKeySecret }}
+                  key: api-key
+            - name: EXOSCALE_API_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.sbc.eipAllocator.exoscaleApiKeySecret }}
+                  key: api-secret
+            - name: EXOSCALE_ZONE
+              value: {{ .Values.sbc.eipAllocator.exoscaleZone | default "" }}
+            {{- end }}
         {{- end }}
         - image: kanisterio/mysql-sidecar:0.40.0
           name: db-create-wait

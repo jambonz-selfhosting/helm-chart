@@ -53,8 +53,11 @@ Install the jambonz helm chart. Replace the domain with your own:
 helm install jambonz --namespace=jambonz \
 --set "cloud=aws" \
 --set "baseUrl=jambonz.example.com" \
+--set "storageClassName=gp3" \
 .
 ```
+
+> **Note**: Setting `storageClassName` to `gp3` is recommended on EKS. gp3 is cheaper and provides better baseline performance than the default gp2.
 
 This automatically sets up hostnames for all portals (`jambonz.example.com`, `api.jambonz.example.com`, `grafana.jambonz.example.com`, `homer.jambonz.example.com`).
 
@@ -167,12 +170,5 @@ The sbc-sip pod will restart with drachtio listening on:
 - 8443/tcp (SIP over WSS)
 
 6. Add DNS A records for the SIP hostname pointing to the public IPs of nodes in the SIP nodepool.
-
-### Enable call recording
-
-Edit `values.yaml` and set `rtpengine.recordings.enabled` to `true`, then upgrade:
-```bash
-helm -n jambonz upgrade jambonz .
-```
 
 See the [Configuration Reference](../README.md#configuration-reference) for additional options.

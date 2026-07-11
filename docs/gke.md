@@ -169,11 +169,4 @@ The sbc-sip pod will restart with drachtio listening on:
 
 6. Add DNS A records for the SIP hostname pointing to the public IPs of nodes in the SIP nodepool.
 
-### Enable call recording
-
-Edit `values.yaml` and set `rtpengine.recordings.enabled` to `true`, then upgrade:
-```bash
-helm -n jambonz upgrade jambonz .
-```
-
 See the [Configuration Reference](../README.md#configuration-reference) for additional options.

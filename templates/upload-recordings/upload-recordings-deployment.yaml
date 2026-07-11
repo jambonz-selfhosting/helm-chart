@@ -49,6 +49,10 @@ spec:
         - name: upload-recordings
           image: {{ .Values.uploadRecordings.image }}
           imagePullPolicy: {{ .Values.uploadRecordings.imagePullPolicy }}
+          {{- if .Values.uploadRecordings.args }}
+          args:
+            {{- toYaml .Values.uploadRecordings.args | nindent 12 }}
+          {{- end }}
           readinessProbe:
             httpGet:
               path: /health
@@ -83,6 +87,12 @@ spec:
                 secretKeyRef:
                   name: jambonz-secrets
                   key: JWT_SECRET
+            - name: STATS_HOST
+              value: {{ .Values.stats.host }}.{{ .Release.Namespace }}
+            - name: STATS_PORT
+              value: {{ .Values.stats.port | quote }}
+            - name: STATS_PROTOCOL
+              value: {{ .Values.stats.protocol }}
           resources: {}
       restartPolicy: Always
 {{- end }}

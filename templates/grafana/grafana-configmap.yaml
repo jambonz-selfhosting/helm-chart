@@ -71,7 +71,7 @@ data:
       isDefault: false
       editable: true
       jsonData:
-        maxLines: 1000
+        maxLines: 50000
 {{- end }}
 
   jambonz-heplify.json: |

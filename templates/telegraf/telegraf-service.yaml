@@ -8,9 +8,14 @@ metadata:
   namespace: {{ .Release.Namespace | quote }}
 spec:
   ports:
-    - name: telegraf
+    - name: statsd-tcp
       port: 8125
       targetPort: 8125
+      protocol: TCP
+    - name: statsd-udp
+      port: 8125
+      targetPort: 8125
+      protocol: UDP
   selector:
     app: telegraf
   clusterIP: None

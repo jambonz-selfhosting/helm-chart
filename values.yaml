@@ -63,15 +63,22 @@ jambonz:
 #   and use those values when creating your single edge-facing nodepool when you spin up the cluster.
 #   (But, for production deployments, separate nodepools are recommended for sip and rtp, and this is the default setup below).
 sbc: 
-  # aws only
-  # update the "cluster-name" below with the cluster name created by the terraform-eks script
-  ec2EipAllocator: 
-    enabled: false
-    image: jambonz/ec2-eip-allocator:latest
+  # EIP/static IP allocator for SBC nodes (supports aws, exoscale, gcp)
+  # Runs as an initContainer to assign a static IP before the SBC starts.
+  # For AWS: tag your EIPs with the role key/value below.
+  # For Exoscale: label your Elastic IPs and provide API credentials via a K8s secret.
+  # For GCP: label your static addresses and ensure nodes have compute-rw scope.
+  eipAllocator:
+    enabled: true
+    image: jambonz/eip-allocator:latest
     rtpEipGroupRoleKey: role
-    rtpEipGroupRole: cluster-name-rtp-node
+    rtpEipGroupRole: rtp-node
     sipEipGroupRoleKey: role
-    sipEipGroupRole: cluster-name-sip-node
+    sipEipGroupRole: sip-node
+    # exoscale only: name of a K8s secret containing keys "api-key" and "api-secret"
+    exoscaleApiKeySecret: ""
+    # exoscale only: zone where EIPs are allocated (e.g. ch-gva-2)
+    exoscaleZone: ""
   sip: 
     nodeSelector: 
       label: voip-environment 
@@ -181,11 +188,22 @@ webapp:
 # standalone recording upload service for high-volume deployments;
 # when disabled, the feature server uploads recordings to the API server
 uploadRecordings:
-  enabled: false
-  image: jambonz/upload-recordings:1.7.3
+  enabled: true
+  image: jambonz/upload-recordings:1.7.6
   imagePullPolicy: IfNotPresent
   replicas: 1
   httpPort: "3000"
+  args:
+    - "--port"
+    - "3000"
+    - "--threads"
+    - "16"
+    - "--aws-max-connections"
+    - "150"
+    - "--buffer-process-size"
+    - "128"
+    - "--max-buffer-size"
+    - "8"
   podAnnotations:
 
 # sbc-inbound configuration
@@ -223,7 +241,7 @@ featureServer:
   httpPort: "3000"
   drachtioConnection: "127.0.0.1:9022:cymru"
   freeswitchConnection: "127.0.0.1:8021:JambonzR0ck$"
-  replicas: 3
+  replicas: 2
   otelSampleRate: 1.0
   podAnnotations:
   resources:
@@ -236,8 +254,8 @@ featureServer:
 
 # sbc-sip configuration
 sbcSip: 
-  loglevel: debug 
-  sofiaLoglevel: "9"
+  loglevel: info 
+  sofiaLoglevel: "3"
 
 # sidecar to wait for database up
 dbWaiter:
@@ -253,8 +271,8 @@ apiban:
 
 loki:
   image: grafana/loki:2.9.6
-  storage: 10Gi
-  retentionPeriod: 24h
+  storage: 50Gi
+  retentionPeriod: 36h
   podAnnotations:
 
 promtail:
