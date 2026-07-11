@@ -158,13 +158,18 @@ drachtio:
   homerId: "10"
   secret: Y3ltcnU=
 
-# freeswitch configuration
-freeswitch:
-  image: jambonz/jambonz-freeswitch:10.1.2
+# mediajam media server configuration (replaces freeswitch in v11)
+mediajam:
+  image: jambonz/mediajam:0.4.17
   imagePullPolicy: IfNotPresent
   args:
-    - freeswitch
-    - --codec-answer-generous
+    - "-addr"
+    - ":8021"
+    - "-log-file"
+    - "-"
+  # optional Krisp noise-cancellation API key (obtain separately from Krisp);
+  # leave empty to run without Krisp. Can be added later via a values override.
+  krispApiKey: ""
 
 # configuration for jambonz-api-server
 api:
@@ -240,7 +245,8 @@ featureServer:
   imagePullPolicy: IfNotPresent
   httpPort: "3000"
   drachtioConnection: "127.0.0.1:9022:cymru"
-  freeswitchConnection: "127.0.0.1:8021:JambonzR0ck$"
+  # mediajam control connection (no password, unlike freeswitch ESL)
+  mediajamConnection: "127.0.0.1:8021"
   replicas: 2
   otelSampleRate: 1.0
   podAnnotations:

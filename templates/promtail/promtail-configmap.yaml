@@ -30,7 +30,7 @@ data:
         relabel_configs:
           - source_labels: [__meta_kubernetes_pod_container_name]
             action: keep
-            regex: drachtio|freeswitch|feature-server|inbound|outbound|sidecar|upload-recordings|api-server
+            regex: drachtio|mediajam|feature-server|inbound|outbound|sidecar|upload-recordings|api-server
 
           - source_labels: [__meta_kubernetes_namespace]
             target_label: namespace
