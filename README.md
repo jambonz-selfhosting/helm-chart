@@ -55,7 +55,6 @@ All portal hostnames are derived automatically from `baseUrl`:
 | Webapp | `jambonz.example.com` |
 | API | `api.jambonz.example.com` |
 | Grafana | `grafana.jambonz.example.com` |
-| Homer | `homer.jambonz.example.com` |
 
 ### Security
 
@@ -65,7 +64,7 @@ These ship with preset defaults. **Change them before any production deployment.
 |-------|-------------|
 | `jwt.secret` | JWT signing secret (base64-encoded) |
 | `db.mysql.secret` | MySQL password (base64-encoded) |
-| `monitoring.postgres.secret` | Homer Postgres password (base64-encoded) |
+| `monitoring.postgres.secret` | Postgres password for the SIP capture DB (base64-encoded) |
 | `drachtio.secret` | Drachtio shared secret (base64-encoded) |
 
 ### Features

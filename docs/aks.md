@@ -55,7 +55,7 @@ helm install jambonz --namespace=jambonz \
 .
 ```
 
-This automatically sets up hostnames for all portals (`jambonz.example.com`, `api.jambonz.example.com`, `grafana.jambonz.example.com`, `homer.jambonz.example.com`).
+This automatically sets up hostnames for all portals (`jambonz.example.com`, `api.jambonz.example.com`, `grafana.jambonz.example.com`).
 
 It takes a few minutes for storage to be provisioned and databases to be initialized. Monitor progress:
 ```bash
@@ -77,7 +77,6 @@ Create DNS A records in your DNS provider, all pointing to this IP:
 - `jambonz.example.com` (webapp)
 - `api.jambonz.example.com` (API)
 - `grafana.jambonz.example.com` (Grafana)
-- `homer.jambonz.example.com` (Homer)
 
 ## Step 4: Enable HTTPS
 
@@ -111,8 +110,8 @@ Go to `https://<your-webapp-hostname>` and log in with user `admin` and password
 ### Grafana
 Go to `https://<your-grafana-hostname>` and log in with user `admin` and password `admin`. You will be prompted to reset the password.
 
-### Homer
-Homer access is generally not needed since pcaps are available in the jambonz portal under Recent Calls. If you need it, go to `https://<your-homer-hostname>` with user `admin` and password `sipcapture`.
+### SIP call traces (pcaps)
+SIP pcaps for recent calls are available directly in the jambonz portal under **Recent Calls**. jambonz v11 no longer ships the Homer web UI; the portal's pcap download is served by pcap-server, which reads from the same SIP capture database.
 
 ## Next Steps
 

@@ -36,7 +36,6 @@ cloud:
 #   webapp  -> jambonz.example.com
 #   api     -> api.jambonz.example.com
 #   grafana -> grafana.jambonz.example.com
-#   homer   -> homer.jambonz.example.com
 # Individual hostnames below can still override if needed.
 baseUrl:
 
