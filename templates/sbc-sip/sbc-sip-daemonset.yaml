@@ -94,6 +94,14 @@ spec:
             - --homer-id
             - {{ .Values.drachtio.homerId | quote }}
             - --reject-register-with-no-realm
+{{- if .Values.sbc.sip.ssl.enabled }}
+            - --cert-file
+            - /etc/letsencrypt/tls.crt
+            - --key-file
+            - /etc/letsencrypt/tls.key
+            - --chain-file
+            - /etc/letsencrypt/tls.crt
+{{- end }}
 {{- if .Values.apiban.apiKey }}
             - --blacklist-redis-address
             - redis.{{ .Release.Namespace  }}

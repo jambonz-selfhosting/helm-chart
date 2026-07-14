@@ -43,6 +43,10 @@ spec:
       serviceAccountName: {{ .Values.sbc.rtp.serviceAccountName | quote }}
 {{- end }}
       volumes:
+      {{- if not .Values.rtpengine.recordings.enabled }}
+        - name: recordings
+          emptyDir: {}
+      {{- end }}
 {{- if .Values.sbc.rtp.extraVolumes }}
 {{ toYaml .Values.sbc.rtp.extraVolumes | default "" | nindent 8 }}
 {{- end }}
@@ -111,7 +115,7 @@ spec:
           args: 
             - rtpengine
             - --listen-udp=22222
-            - --listen-http=8081
+            - --listen-http=127.0.0.1:8081
             - --homer
             - heplify-server.{{ .Release.Namespace  }}:9060
             - --homer-protocol
@@ -136,11 +140,9 @@ spec:
                 secretKeyRef:
                   name: jambonz-secrets
                   key: DRACHTIO_SECRET
-          {{- if .Values.rtpengine.recordings.enabled }}
           volumeMounts:
-            - mountPath: {{ .Values.rtpengine.recordings.dir | quote }}
+            - mountPath: {{ default "/rec" .Values.rtpengine.recordings.dir | quote }}
               name: recordings
-          {{- end }}
           ports:
             - containerPort: 22222
               protocol: TCP
