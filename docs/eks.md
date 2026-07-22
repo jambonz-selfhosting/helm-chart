@@ -54,10 +54,13 @@ helm install jambonz --namespace=jambonz \
 --set "cloud=aws" \
 --set "baseUrl=jambonz.example.com" \
 --set "storageClassName=gp3" \
+--set "sbc.eipAllocator.enabled=true" \
 .
 ```
 
-> **Note**: Setting `storageClassName` to `gp3` is recommended on EKS. gp3 is cheaper and provides better baseline performance than the default gp2.
+> **Note**: `sbc.eipAllocator.enabled=true` assigns the Elastic IPs created by the terraform in Step 1 (tagged `role=sip-node` / `role=rtp-node`) to the SBC nodes. Leave it off if you created your cluster without those EIPs.
+
+> **Note**: The terraform in Step 1 installs the EBS CSI driver addon and creates the `gp3` StorageClass, which is cheaper and faster than gp2. If you created your cluster some other way, create a gp3 StorageClass first — or omit the `storageClassName` setting to use your cluster's default.
 
 This automatically sets up hostnames for all portals (`jambonz.example.com`, `api.jambonz.example.com`, `grafana.jambonz.example.com`).
 

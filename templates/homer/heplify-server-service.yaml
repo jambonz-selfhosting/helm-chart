@@ -16,6 +16,8 @@ spec:
       port: 9096
       targetPort: 9096
       protocol: TCP
+  # Deliberately NOT headless: drachtio (sbc-sip) and rtpengine (sbc-rtp)
+  # resolve this name once at startup and cache it for their HEP stream, so it
+  # must be a stable ClusterIP that survives heplify-server pod restarts.
   selector:
     app: heplify-server
-  clusterIP: None

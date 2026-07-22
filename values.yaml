@@ -64,12 +64,15 @@ jambonz:
 sbc: 
   # EIP/static IP allocator for SBC nodes (supports aws, exoscale, gcp)
   # Runs as an initContainer to assign a static IP before the SBC starts.
+  # Disabled by default: the allocator fails hard (by design) when no matching
+  # EIPs exist, so enable it only after creating the tagged/labeled IPs
+  # (the jambonz-selfhosting terraform scripts do this for you).
   # For AWS: tag your EIPs with the role key/value below.
   # For Exoscale: label your Elastic IPs and provide API credentials via a K8s secret.
   # For GCP: label your static addresses and ensure nodes have compute-rw scope.
   eipAllocator:
-    enabled: true
-    image: jambonz/eip-allocator:latest
+    enabled: false
+    image: jambonz/eip-allocator:1.0.0
     rtpEipGroupRoleKey: role
     rtpEipGroupRole: rtp-node
     sipEipGroupRoleKey: role
@@ -135,7 +138,7 @@ stats:
 rtpengine:
   image: jambonz/rtpengine:14.1.1.8-jambonz11
   imagePullPolicy: IfNotPresent
-  sidecarImage: jambonz/rtpengine-sidecar:0.9.7
+  sidecarImage: jambonz/rtpengine-sidecar:0.9.8
   sidecarImagePullPolicy: IfNotPresent
   wsUrl: "ws://127.0.0.1:8081"
   dtmfLogPort:  "22223"
@@ -159,7 +162,7 @@ drachtio:
 
 # mediajam media server configuration (replaces freeswitch in v11)
 mediajam:
-  image: jambonz/mediajam:0.4.17
+  image: jambonz/mediajam:0.4.22
   imagePullPolicy: IfNotPresent
   args:
     - "-addr"
@@ -172,19 +175,19 @@ mediajam:
 
 # configuration for jambonz-api-server
 api:
-  image: jambonz/api-server:11.0.1
+  image: jambonz/api-server:11.0.2
   imagePullPolicy: IfNotPresent
   httpPort: "3000"
   replicas: 1
   podAnnotations:
 
 dbUpgrade:
-  image: jambonz/db-create:11.0.1
+  image: jambonz/db-create:11.0.2
   imagePullPolicy: IfNotPresent
 
 # jambonz-webapp configuration
 webapp:
-  image: jambonz/webapp:11.0.1
+  image: jambonz/webapp:11.0.2
   imagePullPolicy: IfNotPresent
   replicas: 1
   podAnnotations:
@@ -193,7 +196,7 @@ webapp:
 # when disabled, the feature server uploads recordings to the API server
 uploadRecordings:
   enabled: true
-  image: jambonz/upload-recordings:1.8.5
+  image: jambonz/upload-recordings:1.8.6
   imagePullPolicy: IfNotPresent
   replicas: 1
   httpPort: "3000"
@@ -212,7 +215,7 @@ uploadRecordings:
 
 # sbc-inbound configuration
 sbcInbound:
-  image: jambonz/inbound:11.0.1
+  image: jambonz/inbound:11.0.2
   imagePullPolicy: IfNotPresent
   drachtioPort: "4000"
   replicas: 1
@@ -220,7 +223,7 @@ sbcInbound:
 
 # sbc-outbound configuration
 sbcOutbound:
-  image: jambonz/outbound:11.0.1
+  image: jambonz/outbound:11.0.2
   imagePullPolicy: IfNotPresent
   drachtioPort: "4000"
   replicas: 1
@@ -228,19 +231,19 @@ sbcOutbound:
 
 # sbc-sip-sidecar configuration
 sbcSipSidecar:
-  image: jambonz/sbc-sip-sidecar:0.9.7
+  image: jambonz/sbc-sip-sidecar:0.9.8
   imagePullPolicy: IfNotPresent
 
 # sbc-call-router configuration
 sbcCallRouter:
-  image: jambonz/sbc-call-router:0.9.7
+  image: jambonz/sbc-call-router:0.9.8
   imagePullPolicy: IfNotPresent
   httpPort: "3000"
   replicas: 1
 
 # feature-server configuration
 featureServer:
-  image: jambonz/feature-server:11.0.1
+  image: jambonz/feature-server:11.0.2
   imagePullPolicy: IfNotPresent
   httpPort: "3000"
   drachtioConnection: "127.0.0.1:9022:cymru"

@@ -53,6 +53,33 @@ spec:
 {{ toYaml .Values.sbc.rtp.extraVolumes | default "" | nindent 8 }}
 {{- end }}
       initContainers:
+        {{- if .Values.sbc.eipAllocator.enabled }}
+        - name: eip-allocator
+          image: {{ .Values.sbc.eipAllocator.image }}
+          securityContext:
+            privileged: true
+          env:
+            - name: CLOUD
+              value: {{ .Values.cloud }}
+            - name: EIP_GROUP_ROLE_KEY
+              value: {{ .Values.sbc.eipAllocator.rtpEipGroupRoleKey }}
+            - name: EIP_GROUP_ROLE
+              value: {{ .Values.sbc.eipAllocator.rtpEipGroupRole }}
+            {{- if .Values.sbc.eipAllocator.exoscaleApiKeySecret }}
+            - name: EXOSCALE_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.sbc.eipAllocator.exoscaleApiKeySecret }}
+                  key: api-key
+            - name: EXOSCALE_API_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.sbc.eipAllocator.exoscaleApiKeySecret }}
+                  key: api-secret
+            - name: EXOSCALE_ZONE
+              value: {{ .Values.sbc.eipAllocator.exoscaleZone | default "" }}
+            {{- end }}
+        {{- end }}
         - name: db-create-wait
           image: mysql:8.0
           command:

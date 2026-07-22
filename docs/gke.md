@@ -53,8 +53,11 @@ Install the jambonz helm chart. Replace the domain with your own:
 helm install jambonz --namespace=jambonz \
 --set "cloud=gcp" \
 --set "baseUrl=jambonz.example.com" \
+--set "sbc.eipAllocator.enabled=true" \
 .
 ```
+
+> **Note**: `sbc.eipAllocator.enabled=true` assigns the static IPs created by the terraform in Step 1 (labeled `role=sip-node` / `role=rtp-node`) to the SBC nodes. Leave it off if you created your cluster without those static IPs.
 
 This automatically sets up hostnames for all portals (`jambonz.example.com`, `api.jambonz.example.com`, `grafana.jambonz.example.com`).
 
