@@ -62,6 +62,30 @@ spec:
                 secretKeyRef:
                   name: jambonz-secrets
                   key: MYSQL_PASSWORD
+        # Best-effort wait so drachtio never caches a dead --homer target.
+        # drachtio resolves heplify-server ONCE at startup and caches it; if the
+        # service isn't reachable yet it silently drops ALL HEP until manually
+        # restarted (this is what left Homer empty). Probes heplify's Prometheus
+        # port (9096/TCP) to confirm it's up and the network path works before
+        # drachtio starts. Times out after ~120s and proceeds anyway, so a
+        # heplify outage can NEVER block SIP service from coming up.
+        - image: busybox:1.36
+          name: wait-for-heplify
+          command:
+            - sh
+            - -c
+            - |
+              i=0
+              until wget -q -T 3 -O /dev/null http://heplify-server.{{ .Release.Namespace }}:9096/metrics; do
+                i=$((i+1))
+                if [ $i -ge 24 ]; then
+                  echo "heplify-server not reachable after 120s; starting drachtio anyway (HEP capture may be delayed)"
+                  exit 0
+                fi
+                echo "waiting for heplify-server to be reachable ($i/24)..."
+                sleep 5
+              done
+              echo "heplify-server reachable; proceeding to start drachtio"
       containers:
         - name: drachtio
           image: {{ .Values.drachtio.image }}

@@ -30,5 +30,5 @@ Hostname helpers — all derived from baseUrl
 {{- end -}}
 
 {{- define "jambonz.homerHostname" -}}
-{{- printf "homer.%s" (include "jambonz.baseUrl" .) -}}
+{{- printf "home.%s" (include "jambonz.baseUrl" .) -}}
 {{- end -}}

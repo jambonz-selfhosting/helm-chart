@@ -7,6 +7,12 @@ metadata:
   name: heplify-server
   namespace: {{ .Release.Namespace | quote }}
 spec:
+  # NOTE: intentionally a normal ClusterIP service, NOT headless.
+  # drachtio resolves this name once at startup and caches the IP for its HEP
+  # (UDP 9060) stream. A headless service (clusterIP: None) returns the pod IP,
+  # so every heplify-server pod restart changed that IP and silently blackholed
+  # HEP capture (Homer showed nothing). A stable ClusterIP survives pod
+  # restarts because kube-proxy tracks the endpoint.
   ports:
     - name: "heplify-server"
       port: 9060
@@ -18,4 +24,3 @@ spec:
       protocol: TCP
   selector:
     app: heplify-server
-  clusterIP: None

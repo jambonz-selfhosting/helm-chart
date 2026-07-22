@@ -40,6 +40,13 @@ spec:
                   key: POSTGRES_PASSWORD
             - name: POSTGRES_USER
               value: {{ .Values.postgres.user | b64dec | quote }}
+            # CRITICAL: the postgres image declares VOLUME /var/lib/postgresql/data,
+            # which shadows the PVC (mounted at the parent /var/lib/postgresql) with an
+            # anonymous EPHEMERAL node volume — so all DB data was being lost on every
+            # pod reschedule (Homer logins + captures kept resetting). Point PGDATA at a
+            # path directly on the PVC (NOT under .../data) so data actually persists.
+            - name: PGDATA
+              value: /var/lib/postgresql/pgdata
           ports:
             - containerPort: 5432
           resources: {}
