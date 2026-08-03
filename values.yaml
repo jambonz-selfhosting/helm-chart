@@ -153,7 +153,7 @@ rtpengine:
 
 # used by sidecar apps in sbc-sip and feature-server to connect locally to drachtio server
 drachtio:
-  image: jambonz/drachtio-server:10.0.22
+  image: jambonz/drachtio-server:10.0.23
   imagePullPolicy: IfNotPresent
   host: "127.0.0.1"
   port: "9022"
@@ -162,7 +162,7 @@ drachtio:
 
 # mediajam media server configuration (replaces freeswitch in v11)
 mediajam:
-  image: jambonz/mediajam:0.4.22
+  image: jambonz/mediajam:0.4.23
   imagePullPolicy: IfNotPresent
   args:
     - "-addr"
@@ -175,19 +175,19 @@ mediajam:
 
 # configuration for jambonz-api-server
 api:
-  image: jambonz/api-server:11.0.2
+  image: jambonz/api-server:11.0.3
   imagePullPolicy: IfNotPresent
   httpPort: "3000"
   replicas: 1
   podAnnotations:
 
 dbUpgrade:
-  image: jambonz/db-create:11.0.2
+  image: jambonz/db-create:11.0.3
   imagePullPolicy: IfNotPresent
 
 # jambonz-webapp configuration
 webapp:
-  image: jambonz/webapp:11.0.2
+  image: jambonz/webapp:11.0.3
   imagePullPolicy: IfNotPresent
   replicas: 1
   podAnnotations:
@@ -215,7 +215,7 @@ uploadRecordings:
 
 # sbc-inbound configuration
 sbcInbound:
-  image: jambonz/inbound:11.0.2
+  image: jambonz/inbound:11.0.3
   imagePullPolicy: IfNotPresent
   drachtioPort: "4000"
   replicas: 1
@@ -223,7 +223,7 @@ sbcInbound:
 
 # sbc-outbound configuration
 sbcOutbound:
-  image: jambonz/outbound:11.0.2
+  image: jambonz/outbound:11.0.3
   imagePullPolicy: IfNotPresent
   drachtioPort: "4000"
   replicas: 1
@@ -243,7 +243,7 @@ sbcCallRouter:
 
 # feature-server configuration
 featureServer:
-  image: jambonz/feature-server:11.0.2
+  image: jambonz/feature-server:11.0.3
   imagePullPolicy: IfNotPresent
   httpPort: "3000"
   drachtioConnection: "127.0.0.1:9022:cymru"

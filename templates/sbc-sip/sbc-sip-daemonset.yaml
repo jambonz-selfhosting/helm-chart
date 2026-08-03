@@ -30,6 +30,22 @@ spec:
         {{ .Values.sbc.sip.nodeSelector.label }}: {{.Values.sbc.sip.nodeSelector.value | quote }}
       hostNetwork: true
       dnsPolicy: ClusterFirstWithHostNet
+      # sofia-sip fires a DNS sub-query for EVERY search domain in parallel when a
+      # name has fewer dots than ndots. Cluster defaults (ndots:5 + up to 6 search
+      # domains) therefore turn each carrier lookup into a burst of ~6 queries, most
+      # of them NXDOMAIN, on every call. ndots:2 sends 2+ dot names (carrier hosts)
+      # straight out as a single absolute query, while 0- and 1-dot names still go
+      # through the search list -- which they must, because neither musl (the
+      # Alpine-based sidecar) nor sofia's own resolver retries via the search list
+      # after an absolute NXDOMAIN the way glibc does. That is why ndots:1 is wrong
+      # here: it breaks mysql/redis/influxdb lookups in the sidecar. And do NOT
+      # switch to dnsPolicy: Default -- that also stops the fan-out, but costs this
+      # pod all cluster DNS, which it needs for mysql/redis/heplify-server and for
+      # resolving the feature-server service name.
+      dnsConfig:
+        options:
+          - name: ndots
+            value: "2"
       tolerations:
         - key: {{ .Values.sbc.sip.toleration | quote }}
           operator: "Exists"
