@@ -311,8 +311,17 @@ cassandra:
 pcapServer:
   image: jambonz/pcap-server:1.0.4
   imagePullPolicy: IfNotPresent
+  # basic-auth credential for the pcap-export endpoint. api-server is the only
+  # client (HOMER_USERNAME / HOMER_PASSWORD); both sides read these, so change
+  # them together. authSecret is base64, like the other secrets in this chart.
+  authUsername: admin
+  authSecret: c2lwY2FwdHVyZQ==
   podAnnotations:
-postgres: 
+postgres:
+  # Holds the homer_data SIP capture DB (written by heplify-server, read by
+  # pcap-server). postgres 11 went EOL in Nov 2023, but a major-version bump is
+  # not a tag change: the data directory is version-specific, so a newer image
+  # refuses to start on an existing PVC and needs pg_upgrade or dump/restore.
   image: postgres:11-alpine
   user: cm9vdA==
   secret: aG9tZXJTZXZlbg==
@@ -334,7 +343,10 @@ storageClassName:
 # Affinity
 affinity:
 
-mysql: 
+mysql:
+  # Keep on the 8.0 series: mysql-statefulset.yaml passes
+  # --default-authentication-plugin, which was removed in MySQL 8.4. See the
+  # comment there before bumping this. 8.0 is itself past EOL (Apr 2026).
   image: mysql:8.0
   host: mysql 
   database: jambones

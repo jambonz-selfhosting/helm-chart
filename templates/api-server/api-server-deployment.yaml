@@ -77,9 +77,12 @@ spec:
               value: http://jaeger.{{ .Release.Namespace  }}:16686
 {{- end }}
             - name: HOMER_USERNAME
-              value: admin
+              value: {{ .Values.pcapServer.authUsername | quote }}
             - name: HOMER_PASSWORD
-              value: sipcapture
+              valueFrom:
+                secretKeyRef:
+                  name: jambonz-secrets
+                  key: HOMER_PASSWORD
             - name: ENABLE_METRICS
               value: {{ default "0" .Values.stats.enabled  | quote }}
             {{- if .Values.stats.enabled }}

@@ -55,6 +55,9 @@ spec:
               value: disable
             # basic-auth accepted from api-server (matches HOMER_USERNAME/PASSWORD)
             - name: HOMER_AUTH_USERNAME
-              value: admin
+              value: {{ .Values.pcapServer.authUsername | quote }}
             - name: HOMER_AUTH_PASSWORD
-              value: sipcapture
+              valueFrom:
+                secretKeyRef:
+                  name: jambonz-secrets
+                  key: HOMER_PASSWORD

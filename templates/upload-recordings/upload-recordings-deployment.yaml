@@ -87,12 +87,19 @@ spec:
                 secretKeyRef:
                   name: jambonz-secrets
                   key: JWT_SECRET
+            # Value-compared rather than the plain truthiness test used elsewhere:
+            # stats.enabled is a STRING ("1"/"0"), and a non-empty "0" is truthy in
+            # Go templates. Other components can tolerate that because they also get
+            # ENABLE_METRICS and gate in the app; upload-recordings has no such gate
+            # and starts emitting the moment STATS_HOST is present.
+            {{- if ne (default "0" .Values.stats.enabled | toString) "0" }}
             - name: STATS_HOST
               value: {{ .Values.stats.host }}.{{ .Release.Namespace }}
             - name: STATS_PORT
               value: {{ .Values.stats.port | quote }}
             - name: STATS_PROTOCOL
               value: {{ .Values.stats.protocol }}
+            {{- end }}
           resources: {}
       restartPolicy: Always
 {{- end }}
