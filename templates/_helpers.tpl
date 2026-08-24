@@ -28,7 +28,3 @@ Hostname helpers — all derived from baseUrl
 {{- define "jambonz.grafanaHostname" -}}
 {{- printf "grafana.%s" (include "jambonz.baseUrl" .) -}}
 {{- end -}}
-
-{{- define "jambonz.homerHostname" -}}
-{{- printf "homer.%s" (include "jambonz.baseUrl" .) -}}
-{{- end -}}
