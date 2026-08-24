@@ -72,7 +72,7 @@ sbc:
   # For GCP: label your static addresses and ensure nodes have compute-rw scope.
   eipAllocator:
     enabled: false
-    image: jambonz/eip-allocator:1.0.0
+    image: jambonz/eip-allocator:1.0.1
     rtpEipGroupRoleKey: role
     rtpEipGroupRole: rtp-node
     sipEipGroupRoleKey: role
@@ -136,7 +136,7 @@ stats:
 
 # configuration information for rtpengine
 rtpengine:
-  image: jambonz/rtpengine:14.1.1.8-jambonz11
+  image: jambonz/rtpengine:14.1.1.8-jambonz12
   imagePullPolicy: IfNotPresent
   sidecarImage: jambonz/rtpengine-sidecar:0.9.9
   sidecarImagePullPolicy: IfNotPresent
