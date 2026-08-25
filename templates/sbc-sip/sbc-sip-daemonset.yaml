@@ -51,7 +51,7 @@ spec:
           operator: "Exists"
           effect: "NoSchedule"
       initContainers:
-        {{- if .Values.sbc.eipAllocator.enabled }}
+        {{- if and .Values.sbc.eipAllocator.enabled .Values.sbc.eipAllocator.sipEnabled }}
         - name: eip-allocator
           image: {{ .Values.sbc.eipAllocator.image }}
           securityContext:

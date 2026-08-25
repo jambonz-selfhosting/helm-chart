@@ -51,7 +51,7 @@ spec:
 {{ toYaml .Values.sbc.rtp.extraVolumes | default "" | nindent 8 }}
 {{- end }}
       initContainers:
-        {{- if .Values.sbc.eipAllocator.enabled }}
+        {{- if and .Values.sbc.eipAllocator.enabled .Values.sbc.eipAllocator.rtpEnabled }}
         - name: eip-allocator
           image: {{ .Values.sbc.eipAllocator.image }}
           securityContext:
@@ -154,9 +154,16 @@ spec:
             {{- if .Values.rtpengine.recordings.enabled }}
             - --recording-method
             - {{ .Values.rtpengine.recordings.method }}
-            - --recording-dir
-            - {{ .Values.rtpengine.recordings.dir | quote }}
             {{- end }}
+            # Always point rtpengine at the mounted spool directory, whether or
+            # not recording is enabled. rtpengine 14 creates its spool dirs at
+            # startup regardless, and without this it uses its built-in default
+            # /rec -- which is not the mount point and is not writable, so it
+            # exits with "Failed to create metadata directory /rec/metadata:
+            # Permission denied" and the pod crash-loops. The mount below uses
+            # the same expression, so the two cannot drift apart.
+            - --recording-dir
+            - {{ default "/rec" .Values.rtpengine.recordings.dir | quote }}
           env:
             - name: CLOUD 
               value: {{ required "cloud provider name" .Values.cloud | quote }}
