@@ -144,7 +144,7 @@ stats:
 
 # configuration information for rtpengine
 rtpengine:
-  image: jambonz/rtpengine:14.1.1.8-jambonz12
+  image: jambonz/rtpengine:14.1.1.8-jambonz13
   imagePullPolicy: IfNotPresent
   sidecarImage: jambonz/rtpengine-sidecar:0.9.9
   sidecarImagePullPolicy: IfNotPresent
