@@ -72,6 +72,14 @@ sbc:
   # For GCP: label your static addresses and ensure nodes have compute-rw scope.
   eipAllocator:
     enabled: false
+    # Per-pool switches, both default true, and only consulted when enabled is
+    # true. Set one to false where that pool should keep the node's own public
+    # address instead of claiming an EIP. Exoscale needs this: a managed Elastic
+    # IP requires a TCP healthcheck target and an RTP node has none that is safe
+    # to expose (rtpengine's ng port is UDP), so SKS runs the allocator for SIP
+    # only -- see the RTP note in terraform exoscale/provision-sks-cluster.
+    sipEnabled: true
+    rtpEnabled: true
     image: jambonz/eip-allocator:1.0.1
     rtpEipGroupRoleKey: role
     rtpEipGroupRole: rtp-node
