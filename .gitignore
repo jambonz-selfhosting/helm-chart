@@ -1,0 +1,4 @@
+# This branch is the published chart repository: the packaged charts and the
+# index are the content, so the main branch's ignores must not apply here.
+!*.tgz
+!index.yaml
