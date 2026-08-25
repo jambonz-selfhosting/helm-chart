@@ -1,0 +1,23 @@
+apiVersion: v1
+entries:
+  jambonz:
+  - apiVersion: v2
+    appVersion: 11.1.4
+    created: "2026-08-25T14:32:03.019103-04:00"
+    description: jambonz CPaaS for communication service providers
+    digest: 5bc8405f9351c07a9878c14b1208bd402c37bf33f51304fb6f5978769e41ad32
+    home: https://jambonz.org
+    keywords:
+    - voip
+    - cpaas
+    - webRTC
+    - sip
+    - rtp
+    maintainers:
+    - email: daveh@drachtio.org
+      name: Dave Horton
+    name: jambonz
+    urls:
+    - https://jambonz-selfhosting.github.io/helm-chart/jambonz-11.1.4.tgz
+    version: 11.1.4
+generated: "2026-08-25T14:32:03.017437-04:00"
