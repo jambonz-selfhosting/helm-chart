@@ -273,10 +273,6 @@ sbcSip:
   loglevel: info 
   sofiaLoglevel: "3"
 
-# sidecar to wait for database up
-dbWaiter:
-  image: d3fk/kubectl:v1.18
-
 # if you want to block bad sip actors, get an api key from apiban.org and put it below
 apiban: 
   apiKey: 

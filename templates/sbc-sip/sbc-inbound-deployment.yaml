@@ -31,6 +31,23 @@ spec:
       nodeSelector:
         {{ .Values.sbcInbound.nodeSelector.label }}: {{ .Values.sbcInbound.nodeSelector.value | quote }}      
       {{- end }}   
+      initContainers:
+        - image: mysql:8.0
+          name: db-create-wait
+          command:
+            - sh
+            - -c
+            - |
+              until mysql -u {{ .Values.mysql.user }} -D {{ .Values.mysql.database }} -h mysql.{{ .Release.Namespace }} -p${MYSQL_PASSWORD} --protocol=tcp -e "select count(*) from accounts";
+              do
+                sleep 5
+              done
+          env:
+            - name: MYSQL_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: jambonz-secrets
+                  key: MYSQL_PASSWORD
       containers:
         - name: inbound
           image: {{ .Values.sbcInbound.image }}
