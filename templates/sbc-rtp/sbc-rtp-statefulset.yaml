@@ -43,22 +43,42 @@ spec:
       serviceAccountName: {{ .Values.sbc.rtp.serviceAccountName | quote }}
 {{- end }}
       volumes:
+      {{- if not .Values.rtpengine.recordings.enabled }}
+        - name: recordings
+          emptyDir: {}
+      {{- end }}
 {{- if .Values.sbc.rtp.extraVolumes }}
 {{ toYaml .Values.sbc.rtp.extraVolumes | default "" | nindent 8 }}
 {{- end }}
       initContainers:
-        {{- if and (.Values.sbc.ec2EipAllocator.enabled) (eq .Values.cloud "aws") }}
-        - name: ec2-eip-allocator
-          image: {{ .Values.sbc.ec2EipAllocator.image }}
+        {{- if and .Values.sbc.eipAllocator.enabled .Values.sbc.eipAllocator.rtpEnabled }}
+        - name: eip-allocator
+          image: {{ .Values.sbc.eipAllocator.image }}
           securityContext:
             privileged: true
           env:
-            - name: AWS_EIP_NODE_GROUP_ROLE_KEY
-              value: {{ .Values.sbc.ec2EipAllocator.rtpEipGroupRoleKey }}
-            - name: AWS_EIP_NODE_GROUP_ROLE
-              value: {{ .Values.sbc.ec2EipAllocator.rtpEipGroupRole }}
+            - name: CLOUD
+              value: {{ .Values.cloud }}
+            - name: EIP_GROUP_ROLE_KEY
+              value: {{ .Values.sbc.eipAllocator.rtpEipGroupRoleKey }}
+            - name: EIP_GROUP_ROLE
+              value: {{ .Values.sbc.eipAllocator.rtpEipGroupRole }}
+            {{- if .Values.sbc.eipAllocator.exoscaleApiKeySecret }}
+            - name: EXOSCALE_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.sbc.eipAllocator.exoscaleApiKeySecret }}
+                  key: api-key
+            - name: EXOSCALE_API_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.sbc.eipAllocator.exoscaleApiKeySecret }}
+                  key: api-secret
+            - name: EXOSCALE_ZONE
+              value: {{ .Values.sbc.eipAllocator.exoscaleZone | default "" }}
+            {{- end }}
         {{- end }}
-        - image: kanisterio/mysql-sidecar:0.40.0
+        - image: mysql:8.0
           name: db-create-wait
           command:
             - sh 
@@ -122,7 +142,7 @@ spec:
           args: 
             - rtpengine
             - --listen-udp=22222
-            - --listen-http=8081
+            - --listen-http=127.0.0.1:8081
             - --homer
             - heplify-server.{{ .Release.Namespace  }}:9060
             - --homer-protocol
@@ -134,9 +154,16 @@ spec:
             {{- if .Values.rtpengine.recordings.enabled }}
             - --recording-method
             - {{ .Values.rtpengine.recordings.method }}
-            - --recording-dir
-            - {{ .Values.rtpengine.recordings.dir | quote }}
             {{- end }}
+            # Always point rtpengine at the mounted spool directory, whether or
+            # not recording is enabled. rtpengine 14 creates its spool dirs at
+            # startup regardless, and without this it uses its built-in default
+            # /rec -- which is not the mount point and is not writable, so it
+            # exits with "Failed to create metadata directory /rec/metadata:
+            # Permission denied" and the pod crash-loops. The mount below uses
+            # the same expression, so the two cannot drift apart.
+            - --recording-dir
+            - {{ default "/rec" .Values.rtpengine.recordings.dir | quote }}
           env:
             - name: CLOUD 
               value: {{ required "cloud provider name" .Values.cloud | quote }}
@@ -147,11 +174,9 @@ spec:
                 secretKeyRef:
                   name: jambonz-secrets
                   key: DRACHTIO_SECRET
-          {{- if .Values.rtpengine.recordings.enabled }}
           volumeMounts:
-            - mountPath: {{ .Values.rtpengine.recordings.dir | quote }}
+            - mountPath: {{ default "/rec" .Values.rtpengine.recordings.dir | quote }}
               name: recordings
-          {{- end }}
           ports:
             - containerPort: 22222
               protocol: TCP

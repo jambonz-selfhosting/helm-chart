@@ -36,7 +36,6 @@ cloud:
 #   webapp  -> jambonz.example.com
 #   api     -> api.jambonz.example.com
 #   grafana -> grafana.jambonz.example.com
-#   homer   -> homer.jambonz.example.com
 # Individual hostnames below can still override if needed.
 baseUrl:
 
@@ -63,15 +62,33 @@ jambonz:
 #   and use those values when creating your single edge-facing nodepool when you spin up the cluster.
 #   (But, for production deployments, separate nodepools are recommended for sip and rtp, and this is the default setup below).
 sbc: 
-  # aws only
-  # update the "cluster-name" below with the cluster name created by the terraform-eks script
-  ec2EipAllocator: 
+  # EIP/static IP allocator for SBC nodes (supports aws, exoscale, gcp)
+  # Runs as an initContainer to assign a static IP before the SBC starts.
+  # Disabled by default: the allocator fails hard (by design) when no matching
+  # EIPs exist, so enable it only after creating the tagged/labeled IPs
+  # (the jambonz-selfhosting terraform scripts do this for you).
+  # For AWS: tag your EIPs with the role key/value below.
+  # For Exoscale: label your Elastic IPs and provide API credentials via a K8s secret.
+  # For GCP: label your static addresses and ensure nodes have compute-rw scope.
+  eipAllocator:
     enabled: false
-    image: jambonz/ec2-eip-allocator:latest
+    # Per-pool switches, both default true, and only consulted when enabled is
+    # true. Set one to false where that pool should keep the node's own public
+    # address instead of claiming an EIP. Exoscale needs this: a managed Elastic
+    # IP requires a TCP healthcheck target and an RTP node has none that is safe
+    # to expose (rtpengine's ng port is UDP), so SKS runs the allocator for SIP
+    # only -- see the RTP note in terraform exoscale/provision-sks-cluster.
+    sipEnabled: true
+    rtpEnabled: true
+    image: jambonz/eip-allocator:1.0.1
     rtpEipGroupRoleKey: role
-    rtpEipGroupRole: cluster-name-rtp-node
+    rtpEipGroupRole: rtp-node
     sipEipGroupRoleKey: role
-    sipEipGroupRole: cluster-name-sip-node
+    sipEipGroupRole: sip-node
+    # exoscale only: name of a K8s secret containing keys "api-key" and "api-secret"
+    exoscaleApiKeySecret: ""
+    # exoscale only: zone where EIPs are allocated (e.g. ch-gva-2)
+    exoscaleZone: ""
   sip: 
     nodeSelector: 
       label: voip-environment 
@@ -127,9 +144,9 @@ stats:
 
 # configuration information for rtpengine
 rtpengine:
-  image: jambonz/rtpengine:12.5.1.48
+  image: jambonz/rtpengine:14.1.1.8-jambonz12
   imagePullPolicy: IfNotPresent
-  sidecarImage: jambonz/rtpengine-sidecar:0.9.5-11
+  sidecarImage: jambonz/rtpengine-sidecar:0.9.9
   sidecarImagePullPolicy: IfNotPresent
   wsUrl: "ws://127.0.0.1:8081"
   dtmfLogPort:  "22223"
@@ -144,36 +161,41 @@ rtpengine:
 
 # used by sidecar apps in sbc-sip and feature-server to connect locally to drachtio server
 drachtio:
-  image: jambonz/drachtio-server:10.0.5
+  image: jambonz/drachtio-server:10.1.4
   imagePullPolicy: IfNotPresent
   host: "127.0.0.1"
   port: "9022"
   homerId: "10"
   secret: Y3ltcnU=
 
-# freeswitch configuration
-freeswitch:
-  image: jambonz/jambonz-freeswitch:10.1.2
+# mediajam media server configuration
+mediajam:
+  image: jambonz/mediajam:0.5.4
   imagePullPolicy: IfNotPresent
   args:
-    - freeswitch
-    - --codec-answer-generous
+    - "-addr"
+    - ":8021"
+    - "-log-file"
+    - "-"
+  # optional Krisp noise-cancellation API key (obtain separately from Krisp);
+  # leave empty to run without Krisp. Can be added later via a values override.
+  krispApiKey: ""
 
 # configuration for jambonz-api-server
 api:
-  image: jambonz/api-server:10.0.3
+  image: jambonz/api-server:11.1.4
   imagePullPolicy: IfNotPresent
   httpPort: "3000"
   replicas: 1
   podAnnotations:
 
 dbUpgrade:
-  image: jambonz/db-create:10.0.3
+  image: jambonz/db-create:11.1.4
   imagePullPolicy: IfNotPresent
 
 # jambonz-webapp configuration
 webapp:
-  image: jambonz/webapp:10.0.3
+  image: jambonz/webapp:11.1.4
   imagePullPolicy: IfNotPresent
   replicas: 1
   podAnnotations:
@@ -181,16 +203,27 @@ webapp:
 # standalone recording upload service for high-volume deployments;
 # when disabled, the feature server uploads recordings to the API server
 uploadRecordings:
-  enabled: false
-  image: jambonz/upload-recordings:1.7.3
+  enabled: true
+  image: jambonz/upload-recordings:1.9.0
   imagePullPolicy: IfNotPresent
   replicas: 1
   httpPort: "3000"
+  args:
+    - "--port"
+    - "3000"
+    - "--threads"
+    - "16"
+    - "--aws-max-connections"
+    - "150"
+    - "--buffer-process-size"
+    - "128"
+    - "--max-buffer-size"
+    - "8"
   podAnnotations:
 
 # sbc-inbound configuration
 sbcInbound:
-  image: jambonz/inbound:10.0.3
+  image: jambonz/inbound:11.1.4
   imagePullPolicy: IfNotPresent
   drachtioPort: "4000"
   replicas: 1
@@ -198,7 +231,7 @@ sbcInbound:
 
 # sbc-outbound configuration
 sbcOutbound:
-  image: jambonz/outbound:10.0.3
+  image: jambonz/outbound:11.1.4
   imagePullPolicy: IfNotPresent
   drachtioPort: "4000"
   replicas: 1
@@ -206,24 +239,25 @@ sbcOutbound:
 
 # sbc-sip-sidecar configuration
 sbcSipSidecar:
-  image: jambonz/sbc-sip-sidecar:0.9.5-11
+  image: jambonz/sbc-sip-sidecar:0.9.9
   imagePullPolicy: IfNotPresent
 
 # sbc-call-router configuration
 sbcCallRouter:
-  image: jambonz/sbc-call-router:0.9.5-11
+  image: jambonz/sbc-call-router:0.9.9
   imagePullPolicy: IfNotPresent
   httpPort: "3000"
   replicas: 1
 
 # feature-server configuration
 featureServer:
-  image: jambonz/feature-server:10.0.3
+  image: jambonz/feature-server:11.1.4
   imagePullPolicy: IfNotPresent
   httpPort: "3000"
   drachtioConnection: "127.0.0.1:9022:cymru"
-  freeswitchConnection: "127.0.0.1:8021:JambonzR0ck$"
-  replicas: 3
+  # mediajam control connection (no password required)
+  mediajamConnection: "127.0.0.1:8021"
+  replicas: 2
   otelSampleRate: 1.0
   podAnnotations:
   resources:
@@ -236,8 +270,8 @@ featureServer:
 
 # sbc-sip configuration
 sbcSip: 
-  loglevel: debug 
-  sofiaLoglevel: "9"
+  loglevel: info 
+  sofiaLoglevel: "3"
 
 # sidecar to wait for database up
 dbWaiter:
@@ -253,8 +287,8 @@ apiban:
 
 loki:
   image: grafana/loki:2.9.6
-  storage: 10Gi
-  retentionPeriod: 24h
+  storage: 50Gi
+  retentionPeriod: 36h
   podAnnotations:
 
 promtail:
@@ -266,8 +300,8 @@ grafana:
   storage: 10Gi
   podAnnotations:
             
-heplifyServer: 
-  image: sipcapture/heplify-server:latest
+heplifyServer:
+  image: jambonz/heplify-server:1.0.4
   podAnnotations:
 influxdb: 
   image: influxdb:1.8
@@ -279,10 +313,23 @@ cassandra:
   keyspace: jaeger_v1_dc1
   storage: 30Gi
   podAnnotations:
-homer:
-  image: sipcapture/webapp:latest
+# pcap-server serves SIP pcap export (replaces the homer web-app in v11).
+# Reads captured messages from the same postgres (homer_data db) that
+# heplify-server writes to; api-server reaches it via the homer-webapp service.
+pcapServer:
+  image: jambonz/pcap-server:1.0.4
+  imagePullPolicy: IfNotPresent
+  # basic-auth credential for the pcap-export endpoint. api-server is the only
+  # client (HOMER_USERNAME / HOMER_PASSWORD); both sides read these, so change
+  # them together. authSecret is base64, like the other secrets in this chart.
+  authUsername: admin
+  authSecret: c2lwY2FwdHVyZQ==
   podAnnotations:
-postgres: 
+postgres:
+  # Holds the homer_data SIP capture DB (written by heplify-server, read by
+  # pcap-server). postgres 11 went EOL in Nov 2023, but a major-version bump is
+  # not a tag change: the data directory is version-specific, so a newer image
+  # refuses to start on an existing PVC and needs pg_upgrade or dump/restore.
   image: postgres:11-alpine
   user: cm9vdA==
   secret: aG9tZXJTZXZlbg==
@@ -304,8 +351,11 @@ storageClassName:
 # Affinity
 affinity:
 
-mysql: 
-  image: mysql:5.7
+mysql:
+  # Keep on the 8.0 series: mysql-statefulset.yaml passes
+  # --default-authentication-plugin, which was removed in MySQL 8.4. See the
+  # comment there before bumping this. 8.0 is itself past EOL (Apr 2026).
+  image: mysql:8.0
   host: mysql 
   database: jambones
   user: jambones 

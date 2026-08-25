@@ -37,7 +37,11 @@ spec:
         - name: mysql 
           image: {{ .Values.mysql.image }}
           args:
-            - "--ignore-db-dir=lost+found"
+            # Couples this chart to the MySQL 8.0 series: this option was
+            # deprecated in 8.0.34 and REMOVED in 8.4, where the equivalent is
+            # --mysql-native-password=ON. Bumping mysql.image past 8.0 without
+            # changing this line makes mysqld fail to start on an unknown option.
+            - "--default-authentication-plugin=mysql_native_password"
           env:
             {{- if .Values.mysql.rootSecret }}
             - name: MYSQL_ROOT_PASSWORD

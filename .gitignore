@@ -22,3 +22,6 @@ charts/
 *~
 
 CLAUDE.md
+
+# Test scripts (contain DNS credentials)
+test/

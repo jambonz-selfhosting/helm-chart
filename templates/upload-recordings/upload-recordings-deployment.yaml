@@ -29,7 +29,7 @@ spec:
         {{ toYaml .Values.global.affinity | default "" | nindent 8 }}
       {{- end }}
       initContainers:
-        - image: kanisterio/mysql-sidecar:0.40.0
+        - image: mysql:8.0
           name: db-create-wait
           command:
             - sh
@@ -49,6 +49,10 @@ spec:
         - name: upload-recordings
           image: {{ .Values.uploadRecordings.image }}
           imagePullPolicy: {{ .Values.uploadRecordings.imagePullPolicy }}
+          {{- if .Values.uploadRecordings.args }}
+          args:
+            {{- toYaml .Values.uploadRecordings.args | nindent 12 }}
+          {{- end }}
           readinessProbe:
             httpGet:
               path: /health
@@ -83,6 +87,19 @@ spec:
                 secretKeyRef:
                   name: jambonz-secrets
                   key: JWT_SECRET
+            # Value-compared rather than the plain truthiness test used elsewhere:
+            # stats.enabled is a STRING ("1"/"0"), and a non-empty "0" is truthy in
+            # Go templates. Other components can tolerate that because they also get
+            # ENABLE_METRICS and gate in the app; upload-recordings has no such gate
+            # and starts emitting the moment STATS_HOST is present.
+            {{- if ne (default "0" .Values.stats.enabled | toString) "0" }}
+            - name: STATS_HOST
+              value: {{ .Values.stats.host }}.{{ .Release.Namespace }}
+            - name: STATS_PORT
+              value: {{ .Values.stats.port | quote }}
+            - name: STATS_PROTOCOL
+              value: {{ .Values.stats.protocol }}
+            {{- end }}
           resources: {}
       restartPolicy: Always
 {{- end }}

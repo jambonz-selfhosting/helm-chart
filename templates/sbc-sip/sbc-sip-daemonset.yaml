@@ -30,23 +30,55 @@ spec:
         {{ .Values.sbc.sip.nodeSelector.label }}: {{.Values.sbc.sip.nodeSelector.value | quote }}
       hostNetwork: true
       dnsPolicy: ClusterFirstWithHostNet
+      # sofia-sip fires a DNS sub-query for EVERY search domain in parallel when a
+      # name has fewer dots than ndots. Cluster defaults (ndots:5 + up to 6 search
+      # domains) therefore turn each carrier lookup into a burst of ~6 queries, most
+      # of them NXDOMAIN, on every call. ndots:2 sends 2+ dot names (carrier hosts)
+      # straight out as a single absolute query, while 0- and 1-dot names still go
+      # through the search list -- which they must, because neither musl (the
+      # Alpine-based sidecar) nor sofia's own resolver retries via the search list
+      # after an absolute NXDOMAIN the way glibc does. That is why ndots:1 is wrong
+      # here: it breaks mysql/redis/influxdb lookups in the sidecar. And do NOT
+      # switch to dnsPolicy: Default -- that also stops the fan-out, but costs this
+      # pod all cluster DNS, which it needs for mysql/redis/heplify-server and for
+      # resolving the feature-server service name.
+      dnsConfig:
+        options:
+          - name: ndots
+            value: "2"
       tolerations:
         - key: {{ .Values.sbc.sip.toleration | quote }}
           operator: "Exists"
           effect: "NoSchedule"
       initContainers:
-        {{- if and (.Values.sbc.ec2EipAllocator.enabled) (eq .Values.cloud "aws") }}
-        - name: ec2-eip-allocator
-          image: {{ .Values.sbc.ec2EipAllocator.image }}
+        {{- if and .Values.sbc.eipAllocator.enabled .Values.sbc.eipAllocator.sipEnabled }}
+        - name: eip-allocator
+          image: {{ .Values.sbc.eipAllocator.image }}
           securityContext:
             privileged: true
           env:
-            - name: AWS_EIP_NODE_GROUP_ROLE_KEY
-              value: {{ .Values.sbc.ec2EipAllocator.sipEipGroupRoleKey }}
-            - name: AWS_EIP_NODE_GROUP_ROLE
-              value: {{ .Values.sbc.ec2EipAllocator.sipEipGroupRole }}
+            - name: CLOUD
+              value: {{ .Values.cloud }}
+            - name: EIP_GROUP_ROLE_KEY
+              value: {{ .Values.sbc.eipAllocator.sipEipGroupRoleKey }}
+            - name: EIP_GROUP_ROLE
+              value: {{ .Values.sbc.eipAllocator.sipEipGroupRole }}
+            {{- if .Values.sbc.eipAllocator.exoscaleApiKeySecret }}
+            - name: EXOSCALE_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.sbc.eipAllocator.exoscaleApiKeySecret }}
+                  key: api-key
+            - name: EXOSCALE_API_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.sbc.eipAllocator.exoscaleApiKeySecret }}
+                  key: api-secret
+            - name: EXOSCALE_ZONE
+              value: {{ .Values.sbc.eipAllocator.exoscaleZone | default "" }}
+            {{- end }}
         {{- end }}
-        - image: kanisterio/mysql-sidecar:0.40.0
+        - image: mysql:8.0
           name: db-create-wait
           command:
             - sh 
@@ -78,6 +110,14 @@ spec:
             - --homer-id
             - {{ .Values.drachtio.homerId | quote }}
             - --reject-register-with-no-realm
+{{- if .Values.sbc.sip.ssl.enabled }}
+            - --cert-file
+            - /etc/letsencrypt/tls.crt
+            - --key-file
+            - /etc/letsencrypt/tls.key
+            - --chain-file
+            - /etc/letsencrypt/tls.crt
+{{- end }}
 {{- if .Values.apiban.apiKey }}
             - --blacklist-redis-address
             - redis.{{ .Release.Namespace  }}

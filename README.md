@@ -55,7 +55,6 @@ All portal hostnames are derived automatically from `baseUrl`:
 | Webapp | `jambonz.example.com` |
 | API | `api.jambonz.example.com` |
 | Grafana | `grafana.jambonz.example.com` |
-| Homer | `homer.jambonz.example.com` |
 
 ### Security
 
@@ -65,7 +64,7 @@ These ship with preset defaults. **Change them before any production deployment.
 |-------|-------------|
 | `jwt.secret` | JWT signing secret (base64-encoded) |
 | `db.mysql.secret` | MySQL password (base64-encoded) |
-| `monitoring.postgres.secret` | Homer Postgres password (base64-encoded) |
+| `monitoring.postgres.secret` | Postgres password for the SIP capture DB (base64-encoded) |
 | `drachtio.secret` | Drachtio shared secret (base64-encoded) |
 
 ### Features
@@ -79,11 +78,12 @@ These ship with preset defaults. **Change them before any production deployment.
 | `global.logging.enabled` | Deploy Loki + Promtail for centralized pod logging | `true` |
 | `sbc.sip.ssl.enabled` | Enable SIPS (TLS) and Secure WebSocket listeners on the SBC | `false` |
 | `rtpengine.recordings.enabled` | Enable call recording to persistent storage | `false` |
+| `sbc.eipAllocator.enabled` | Assign tagged Elastic/static IPs to SBC nodes at startup (aws, gcp, exoscale) | `false` |
 
 ### Scaling
 
 The three components that matter for call capacity are:
 
-- **feature-server** — a Deployment that handles call processing. Scale by increasing `featureServer.replicas` (default: `3`).
+- **feature-server** — a Deployment that handles call processing. Scale by increasing `featureServer.replicas` (default: `2`).
 - **sbc-sip** — a DaemonSet that runs one pod per node in the SIP nodepool. Scale by adding nodes to the SIP nodepool.
 - **sbc-rtp** — a DaemonSet that runs one pod per node in the RTP nodepool. Scale by adding nodes to the RTP nodepool.

@@ -34,6 +34,9 @@ spec:
           name: telegraf
           ports:
             - containerPort: 8125
+              protocol: TCP
+            - containerPort: 8125
+              protocol: UDP
           resources: {}
           volumeMounts:
             - mountPath: /etc/telegraf/telegraf.conf

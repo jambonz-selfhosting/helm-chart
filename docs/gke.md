@@ -53,10 +53,13 @@ Install the jambonz helm chart. Replace the domain with your own:
 helm install jambonz --namespace=jambonz \
 --set "cloud=gcp" \
 --set "baseUrl=jambonz.example.com" \
+--set "sbc.eipAllocator.enabled=true" \
 .
 ```
 
-This automatically sets up hostnames for all portals (`jambonz.example.com`, `api.jambonz.example.com`, `grafana.jambonz.example.com`, `homer.jambonz.example.com`).
+> **Note**: `sbc.eipAllocator.enabled=true` assigns the static IPs created by the terraform in Step 1 (labeled `role=sip-node` / `role=rtp-node`) to the SBC nodes. Leave it off if you created your cluster without those static IPs.
+
+This automatically sets up hostnames for all portals (`jambonz.example.com`, `api.jambonz.example.com`, `grafana.jambonz.example.com`).
 
 It takes a few minutes for storage to be provisioned and databases to be initialized. Monitor progress:
 ```bash
@@ -83,7 +86,6 @@ Create DNS A records in your DNS provider, all pointing to this IP:
 - `jambonz.example.com` (webapp)
 - `api.jambonz.example.com` (API)
 - `grafana.jambonz.example.com` (Grafana)
-- `homer.jambonz.example.com` (Homer)
 
 ## Step 4: Enable HTTPS
 
@@ -117,8 +119,8 @@ Go to `https://<your-webapp-hostname>` and log in with user `admin` and password
 ### Grafana
 Go to `https://<your-grafana-hostname>` and log in with user `admin` and password `admin`. You will be prompted to reset the password.
 
-### Homer
-Homer access is generally not needed since pcaps are available in the jambonz portal under Recent Calls. If you need it, go to `https://<your-homer-hostname>` with user `admin` and password `sipcapture`.
+### SIP call traces (pcaps)
+SIP pcaps for recent calls are available directly in the jambonz portal under **Recent Calls**. jambonz v11 no longer ships the Homer web UI; the portal's pcap download is served by pcap-server, which reads from the same SIP capture database.
 
 ## Next Steps
 
@@ -168,12 +170,5 @@ The sbc-sip pod will restart with drachtio listening on:
 - 8443/tcp (SIP over WSS)
 
 6. Add DNS A records for the SIP hostname pointing to the public IPs of nodes in the SIP nodepool.
-
-### Enable call recording
-
-Edit `values.yaml` and set `rtpengine.recordings.enabled` to `true`, then upgrade:
-```bash
-helm -n jambonz upgrade jambonz .
-```
 
 See the [Configuration Reference](../README.md#configuration-reference) for additional options.

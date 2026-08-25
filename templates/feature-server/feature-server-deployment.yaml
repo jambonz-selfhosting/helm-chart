@@ -41,7 +41,7 @@ spec:
             matchLabels:
               app: feature-server    
       initContainers:
-        - image: kanisterio/mysql-sidecar:0.40.0
+        - image: mysql:8.0
           name: db-create-wait
           command:
             - sh 
@@ -82,50 +82,28 @@ spec:
           args: ['drachtio', '--contact', 'sip:*:5060;transport=udp', '--mtu', '4096', '--loglevel', 'info', '--sofia-loglevel', '3', '--feature-server-mode']
           ports:
             - containerPort: 9022
-        - name: freeswitch
-          image: {{ .Values.freeswitch.image }}
-          imagePullPolicy: {{ default "IfNotPresent" .Values.freeswitch.imagePullPolicy }}
+        - name: mediajam
+          image: {{ .Values.mediajam.image }}
+          imagePullPolicy: {{ default "IfNotPresent" .Values.mediajam.imagePullPolicy }}
           args:
-          {{- range .Values.freeswitch.args }}
+          {{- range .Values.mediajam.args }}
             - {{ . | quote }}
           {{- end }}
           env:
+            # mediajam uses redis (license loader); it does NOT use mysql
             - name: JAMBONES_REDIS_HOST
               value: redis.{{ .Release.Namespace }}
-            - name: JAMBONES_MYSQL_HOST
-              value: mysql.{{ .Release.Namespace }}
-            - name: JAMBONES_MYSQL_USER
-              value: {{ .Values.mysql.user }}
-            - name: JAMBONES_MYSQL_PASSWORD
-              valueFrom:
-                secretKeyRef:
-                  name: jambonz-secrets
-                  key: MYSQL_PASSWORD
-            - name: JAMBONES_MYSQL_DATABASE
-              value: {{ .Values.mysql.database }}
-            - name: MOD_AUDIO_FORK_SUBPROTOCOL_NAME
-              value: audio.jambonz.org
-            - name: MOD_AUDIO_FORK_SERVICE_THREADS
-              value: "1"
-            - name: MOD_AUDIO_FORK_BUFFER_SECS
-              value: "3"
-            - name: DEEPGRAM_SPEECH_USE_SINGLE_CONNECTION
-              value: "1"
-            - name: DISABLE_HTTP2_FOR_TTS_STREAMING
-              value: "1"
-          lifecycle:
-            preStop:
-              exec:
-                command: [
-                  "/bin/sh",
-                  "-c",
-                  "while $(curl --output /dev/null --silent --head --fail-early http://127.0.0.1:3000); do printf '.'; sleep 10; done"
-                ]
+            - name: JAMBONES_REDIS_PORT
+              value: {{ .Values.redis.port | quote }}
+            {{- if .Values.mediajam.krispApiKey }}
+            - name: KRISP_API_KEY
+              value: {{ .Values.mediajam.krispApiKey | quote }}
+            {{- end }}
           volumeMounts:
-            - mountPath: /tmp 
+            - mountPath: /tmp
               name: temp-audio-volume
           ports:
-            - containerPort: 8081
+            - containerPort: 8021
         - name: feature-server 
           image: {{ .Values.featureServer.image }}
           imagePullPolicy: {{ .Values.featureServer.imagePullPolicy }}
@@ -166,8 +144,8 @@ spec:
               value: 127.0.0.1 
             - name: DRACHTIO_PORT 
               value: "9022"
-            - name: JAMBONES_FREESWITCH
-              value: {{ .Values.featureServer.freeswitchConnection | quote }}
+            - name: JAMBONES_MEDIAJAM
+              value: {{ .Values.featureServer.mediajamConnection | quote }}
             - name: ENABLE_METRICS
               value: {{ default "0" .Values.stats.enabled  | quote }}
             - name: JAMBONZ_CLEANUP_INTERVAL_MINS
