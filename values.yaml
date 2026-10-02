@@ -203,7 +203,6 @@ webapp:
 # standalone recording upload service for high-volume deployments;
 # when disabled, the feature server uploads recordings to the API server
 uploadRecordings:
-  enabled: true
   image: jambonz/upload-recordings:1.9.0
   imagePullPolicy: IfNotPresent
   replicas: 1
