@@ -206,13 +206,8 @@ spec:
                 secretKeyRef:
                   name: jambonz-secrets
                   key: JWT_SECRET
-            {{- if .Values.uploadRecordings.enabled }}
             - name: JAMBONZ_RECORD_WS_BASE_URL
               value: ws://upload-recordings.{{ .Release.Namespace }}:{{ .Values.uploadRecordings.httpPort }}
-            {{- else }}
-            - name: JAMBONZ_RECORD_WS_BASE_URL
-              value: ws://{{ include "jambonz.apiHostname" . }}/api/v1
-            {{- end }}
             - name: JAMBONZ_RECORD_WS_USERNAME
               value: jambonz
             - name: JAMBONZ_RECORD_WS_PASSWORD

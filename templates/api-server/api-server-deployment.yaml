@@ -123,13 +123,6 @@ spec:
                 secretKeyRef:
                   name: jambonz-secrets
                   key: JWT_SECRET
-            - name: JAMBONZ_RECORD_WS_USERNAME
-              value: jambonz
-            - name: JAMBONZ_RECORD_WS_PASSWORD
-              valueFrom:
-                secretKeyRef:
-                  name: jambonz-secrets
-                  key: JWT_SECRET
             - name: JAMBONES_DISABLE_TTS_STREAMING
               value: "1"
           ports:

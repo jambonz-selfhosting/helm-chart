@@ -1,4 +1,3 @@
-{{- if .Values.uploadRecordings.enabled }}
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -102,4 +101,3 @@ spec:
             {{- end }}
           resources: {}
       restartPolicy: Always
-{{- end }}
